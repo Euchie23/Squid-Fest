@@ -4,7 +4,9 @@ Objective
 
 The Squid Fest Project involved a series of interdisciplinary research initiatives using data from squid caught off the coast of Argentina, north of the Falkland Islands. These projects aimed to assess the health of the marine environment in the region and provide insights into squid catch dynamics. The hands-on experience from these projects provided advanced expertise in data analysis, statistical modeling, emphasizes environmental science applications, particulary within marine ecology.
 
+
 **DISCLAIMER: For confidentiality reasons, this project utilized simulated data closely resembling real-world datasets. The purpose was to demonstrate analytical techniques and methodologies. As a result, any interpretations or conclusions drawn DO NOT reflect the actual conditions within the study region.**
+
 
 
 Skills Learned
