@@ -29,17 +29,17 @@ library(gdata)
  
  
 #taking the CSV files from the folder and making them into a list (each file/organic compounds has its own dataset)
-files <- list.files(path = "Organic Compounds/2020_OC/")
+files <- list.files(path = "Organic Compounds Raw Data/2021_OC/")
 Smcsv <- list()
 for (i in 1:length(files)) {
-  Smcsv[[i]] <- read.csv(paste0("Organic Compounds/2020_OC/",files[i]), header = T, sep = ",", dec = ".")
+  Smcsv[[i]] <- read.csv(paste0("Organic Compounds Raw Data/2021_OC/",files[i]), header = T, sep = ",", dec = ".")
 }
 
 names(Smcsv) <- smnames
 
 #SM dry weight#
 #PLEASE REMEMBER TO CHANGE DATASET TO CORRECT YEAR
-sm_dw1 <- read.csv("Organic Compounds/Dry weight data /2020dryweight_SM.csv", header= TRUE)
+sm_dw1 <- read.csv("Organic Compounds Raw Data/Dry weight data /2021dryweight_SM.csv", header= TRUE)
 
 if(colnames(sm_dw1)[ncol(sm_dw1)]!= "Ink.sac..mg."){
   colnames(sm_dw1) <- c("ID","s","l","m") 
@@ -51,7 +51,7 @@ if(colnames(sm_dw1)[ncol(sm_dw1)]!= "Ink.sac..mg."){
 dtl<- read.csv("Squid Catch Data/Distance_to_land.csv", header= TRUE)
 
 #SQUID CATCH DATA...CHANGE BASED ON THE YEAR YOU ARE PROCESSING, Basic information = bi
-bi<- read.csv("Squid Catch Data/2020_catch_data.csv", header= TRUE)
+bi<- read.csv("Squid Catch Data/2021_catch_data.csv", header= TRUE)
 
 #STEP 1: CLEANING AND MODIFYING DATASETS----
 #1 String manipulation and data cleaning
@@ -360,8 +360,8 @@ colnames(x)[c(1,3)] <- c("ID", "DW")
    # write.csv(x, "Results/Final_SMresults_mgkg.csv", row.names = FALSE)
    
    #APPENDING FUTURE BATCHES TO EXTRACTION RESULTS CSV
-   Final_res_SM = "Results/Final_SMresults_mgkg.csv"
+   Final_res_SM = "Results/Final_SM1results_mgkg.csv"
    write.table(x, file = Final_res_SM, sep = ",",#change the rows index
                append = TRUE, quote = FALSE,
-               col.names = FALSE, row.names = FALSE)
+               col.names = TRUE, row.names = FALSE)
 
