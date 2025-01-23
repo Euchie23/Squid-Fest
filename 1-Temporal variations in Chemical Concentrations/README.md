@@ -30,9 +30,9 @@ The Squid Fest Project involved a series of interdisciplinary research initiativ
 🛠️ Geospatial analysis (QGIS).  <br>
 🛠️ Microsoft office (Excel and Word).  <br>
 
-Projects (More to come)
-1-Temporal variation in Chemical Concentrations  <br>
-  Task-1-Data Preprocessing  <br>
-  Task-2-Temporal Analysis of Concentrations  <br>
+## Projects 🦑🌊 (More to come) <br>
+### 1-Temporal variation in Chemical Concentrations ⏳📈 <br>
+      Task-1-Data Preprocessing  <br>
+      Task-2-Temporal Analysis of Concentrations  <br>
 
 
