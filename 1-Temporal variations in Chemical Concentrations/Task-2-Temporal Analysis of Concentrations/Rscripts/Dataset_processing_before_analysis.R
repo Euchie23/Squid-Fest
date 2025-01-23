@@ -41,7 +41,7 @@ process_dataset <- function(data, keep_LOQ_values=FALSE) {
       
       process_with_user_input <- function() {
         # Ask the user if they want to keep LOQ values
-        keep_loq <- readline(prompt = "Do you want to keep LOQ values? (yes/no): ")
+        keep_loq <- readline(prompt = "Do you want to keep the original LOQ values? (yes/no): ")
         
         if (tolower(keep_loq) == "yes") {
           cat("You chose to keep LOQ values.\n")
@@ -206,9 +206,12 @@ process_dataset <- function(data, keep_LOQ_values=FALSE) {
 } 
 
 
+# NOTE FOR THE BELOW FUNCTIONS:
+#If you choose FALSE for "keep_LOQ_values", it will be replaced with 0, then removed later in the data analysis based on the user's input, when asked if you want to to keep the original LOQ values if you choose "Yes" it keeps the original values, if no it asks for a multiplier. This is because some researchers use half or maybe quarter of the LOQ values when running the analysis.
+
 # Example for Heavy Metals dataset
 heavymetals_data <- read.csv("Final_Results_From_Task 1/Final_HMresults_mgkg.csv", header = TRUE)
-processed_hm_data <- process_dataset(heavymetals_data, keep_LOQ_values = TRUE)
+processed_hm_data <- process_dataset(heavymetals_data, keep_LOQ_values = TRUE) 
 
 # Example for Organic Compounds dataset
 sm_data <- read.csv("Final_Results_From_Task 1/Final_SMresults_mgkg.csv", header = TRUE)

@@ -1,18 +1,16 @@
 #LOADING LIBRARIES----
-library(dplyr)
-library(tidyr)
-library(DescTools)
-library(dplyr)
-library(tidyr)
-library(ggplot2)  # For CLD if required
+library(DescTools) # For descriptive statistics
 library(FSA)      # For Dunn's test
-library(multcompView)  # For Compact Letter Displays
+library(ggplot2)  # For plotting graphs
+library(dplyr) # for data manipulation
+library(tidyr) # For a collection of R packages used for data manipulation and visualization.
+library(rcompanion) # For Compact Letter Displays
 library(agricolae)  # For Tukey HSD compact letter displays
 
 
 #FUNCTIONS FOR PROCESSING DATA----
 
-#Step 1
+#Step 1----
 temporal_analysis_step1 <- function(data, remove_zeroes = FALSE) {
   # Determine the range of columns to process
   if (grepl("Fe|Ag", colnames(data)[16])) {
@@ -135,15 +133,19 @@ temporal_analysis_step1 <- function(data, remove_zeroes = FALSE) {
   )
 } #This function processes the data to give the normality test results, summary statistics for each pollutant and manipulating the daatset from wide to long structure.
 
-temporal_analysis_step1 <-temporal_analysis_step1(processed_sm_data)
+temporal_analysis_step1 <-temporal_analysis_step1(processed_hm_data) #Run Function #1
 
-#Step 2
+
+
+
+
+#Step 2----
 temporal_analysis_step2 <- function(data_list, remove_zeroes = FALSE) {
   # Unpack the data list into individual elements
   results_data <- data_list$ShapiroResults
   long_data <- data_list$LongData
   summary_statistics <- data_list$SummaryStatistics
-  #print(summary_statistics)
+  #print(remove_zeroes)
   
   # Initialize empty lists to store results
   test_results <- list()
@@ -172,7 +174,8 @@ temporal_analysis_step2 <- function(data_list, remove_zeroes = FALSE) {
       # Filter data for the current tissue
       data <- results_for_pollutant %>%
         filter(Tissue == tissue)
-      
+
+      print(data)
       
       subset_long <- long_data_for_pollutant %>%
         filter(Tissue == tissue)
@@ -187,6 +190,8 @@ temporal_analysis_step2 <- function(data_list, remove_zeroes = FALSE) {
       # Check if Shapiro-Wilk test failed, indicating non-normality
       if (any(data$TestResult == "Fail")) {
         
+        print(paste("I am in running KW.TEST for", pollutant, tissue))
+        
         # Perform Kruskal-Wallis test for non-normal data
         group_comparison_tests <- kruskal.test(Concentration ~ interactions, data = subset_long)
         
@@ -194,11 +199,13 @@ temporal_analysis_step2 <- function(data_list, remove_zeroes = FALSE) {
         # Perform Dunn's test for pairwise comparisons
         post_hoc_test <- dunnTest(Concentration ~ interactions, data = subset_long, method = "bonferroni")
 
+        # Compact letter displays to show comparisons
         compact_letter_displays <- cldList(P.adj ~ Comparison, data = post_hoc_test$res, threshold = 0.05, remove.zero = remove_zeroes)
         
        # Combine compact letter results
        compact_letters1 <-compact_letter_displays %>% separate(Group, c("Tissue", "Year"))
-  
+       
+      #Checking if the letters are the same in column 3, if they all are then we replace them with a blank space and then add them to the big dataset compact_letters2
        if(all(compact_letters1[-1,3]== compact_letters1[1,3])){
          compact_letters1[,c(3:4)] <- paste(" ")
          compact_letters2 <- rbind(compact_letters2,compact_letters1)
@@ -206,6 +213,7 @@ temporal_analysis_step2 <- function(data_list, remove_zeroes = FALSE) {
          compact_letters2 <- rbind(compact_letters2,compact_letters1)
        }
        
+       # Since We didnt collect inksac for 2019 we mainly used this piece of code as a placeholder for for visualization in the graphs
        if(unique(subset_long$Tissue)=='inksac' & '2019' %in% subset_long[,'Year']==FALSE){
          compact_letters_for_inksac_2019 <- data.frame(matrix(ncol = 4, nrow = 1))
        compact_letters_names <-c("Tissue","Year","Letter","MonoLetter")
@@ -227,33 +235,37 @@ temporal_analysis_step2 <- function(data_list, remove_zeroes = FALSE) {
           CompactLetters = compact_letters2[,3]
         )
        
-      } else {
+      } else if (any(data$TestResult != "Fail") & any(data$TestResult == "Pass")){
+        
+        print(paste("I am in running ANOVA for", pollutant, tissue))
+        
         # Perform ANOVA for normally distributed data
         group_comparison_tests <- aov(Concentration ~ interactions, data = subset_long)
         
+        
         # Run post hoc Tukey HSD test
         post_hoc_test <- HSD.test(group_comparison_tests, "interactions", group = TRUE)
-        compact_letters1.1 <- post_hoc_test$groups
+        #compact_letters1.1 <- post_hoc_test$groups
         
+        compact_letters1 <- post_hoc_test$groups %>%
+          rownames_to_column(var = "Variables") %>% # Convert row names to a column
+          separate(Variables, into = c("Tissue", "Year"), sep = "\\.") # Split "Group" column into "Tissue" and "Year"
+        
+        
+        compact_letters1.1 <- compact_letters1 %>%
+          select(-Concentration) %>%                 # Remove the "Concentration" column
+          mutate(Monoletter = groups, .keep = "all") %>% # Add a replicated "groups" column as "Monoletters"
+          dplyr::rename(Letter = groups)                   # Rename "groups" to "Letters"
+      
+    
         # Assign compact letter results for Tukey test
-        compact_letters1.1 <-compact_letter_displays %>% separate(Group, c("Tissue", "Year"))
         if(all(compact_letters1.1[-1,3]== compact_letters1.1[1,3])){
           compact_letters1.1[,c(3:4)] <- paste(" ")
           compact_letters2 <- rbind(compact_letters2,compact_letters1.1)
         }else{
           compact_letters2 <- rbind(compact_letters2,compact_letters1.1)
         }
-        
-        if(unique(subset_long$Tissue)=='inksac' & '2019' %in% subset_long[,'Year']==FALSE){
-          compact_letters_for_inksac_2019 <- data.frame(matrix(ncol = 4, nrow = 1))
-          compact_letters_names <-c("Tissue","Year","Letter","MonoLetter")
-          colnames(compact_letters_for_inksac_2019) <- compact_letters_names
-          compact_letters_for_inksac_2019[,1]<- 'inksac'
-          compact_letters_for_inksac_2019[,2]<- '2019'
-          compact_letters_for_inksac_2019[,c(3:4)]<- paste(" ")
-          
-          compact_letters2 <- rbind(compact_letters2,compact_letters_for_inksac_2019)
-        }
+
         
         # Store results in the list as a data frame
         test_results[[length(test_results) + 1]] <- data.frame(
@@ -263,8 +275,30 @@ temporal_analysis_step2 <- function(data_list, remove_zeroes = FALSE) {
           TestType = "ANOVA",
           CompactLetters = compact_letters2[,3]
         )
-
+   # For those pollutants that had less than 3 or no observations and hence couldn't be used to run tests
+      }else if (all(data$TestResult == "<3/No observations")){
+        print(paste(pollutant, tissue, "doesn't have enough obervations to run tests"))
+        compact_letters_for_few_obs <- data.frame(matrix(ncol = 4, nrow = 3))
+        compact_letters_names <-c("Tissue","Year","Letter","MonoLetter")
+        colnames(compact_letters_for_few_obs) <- compact_letters_names
+        compact_letters_for_few_obs[,1]<- data$Tissue
+        compact_letters_for_few_obs[,2]<- data$Year
+        compact_letters_for_few_obs[,c(3:4)]<- paste(" ")
+        
+        compact_letters2 <- rbind(compact_letters2,compact_letters_for_few_obs) 
+        
+        
+        # Store results in the list as a data frame
+        test_results[[length(test_results) + 1]] <- data.frame(
+          Pollutant = pollutant,
+          Tissue = tissue,
+          Year= compact_letters2[,2],
+          TestType = "No Test",
+          CompactLetters = compact_letters2[,3]
+        )
+        
       }
+      
       #Appending group comparisons tests results and test result names to list
       group_comparison_tests_list<-append(list(group_comparison_tests),group_comparison_tests_list, 0)
       name1 <-paste(pollutant, tissue, "group_comparison_tests_list", sep = " ")
@@ -314,10 +348,14 @@ temporal_analysis_step2 <- function(data_list, remove_zeroes = FALSE) {
   return(list (final_summary_list=final_summary_list, group_comparison_tests_list=group_comparison_tests_list, post_hoc_tests_list=post_hoc_tests_list))
 }#This function processes the data to run the group comparisons test, based on the normaility test results, in tandem with the corresponding post hoc tests and modification of the summary statistic by adding the compact letter displays.
 
-temporal_analysis_step2 <- temporal_analysis_step2 (temporal_analysis_part1)
+temporal_analysis_step2 <- temporal_analysis_step2 (temporal_analysis_step1) #Run Function #2
 
 
-#Step 3
+
+
+
+
+#Step 3----
 temporal_analysis_step3 <- function(data_list){
 # Unpack the data list into individual elements
 
@@ -329,8 +367,8 @@ pollutant_name <- gsub(" summary_stats","", names(data_list$final_summary_list)[
 
 # Initialize empty lists to store results
 
-list3 <- list()
-list3names <- c()
+plots_list <- list()
+plot_names <- c()
 
 
 if(grepl("Fe|Ag", pollutant_name)) { # if Fe or Ag is detected  as the name of the frist dataset in the list then run the below code fro heavy metals.
@@ -355,7 +393,6 @@ if(grepl("Fe|Ag", pollutant_name)) { # if Fe or Ag is detected  as the name of t
     
     # plucking out the recommended_maximum_levels (rml) for each pollutant
     rml <-recommended_levels %>% subset(pollutants == contaminant)
-    print(rml)
     
     
     # Filter data for the current pollutant
@@ -408,11 +445,12 @@ if (all(summary_statistics_per_pollutant[-1, 12] == summary_statistics_per_pollu
                   labs(y = "Concentration mg/kg", x = "Tissue")+
                   labs(fill = "Years") + geom_text(aes(label=N), position = position_dodge(1), size = 3,vjust=1.5, color='#993300')+
                   geom_text(aes(label=CompactLetters), position = position_dodge(1), size = 5,vjust=-0.2, hjust=-0.005, colour ="black")+ 
+                    #This below piece of code compares the value in the second column of the rml object (rml[, 2]) with the maximum value in the column of summary_statistics_per_pollutant corresponding to the variable contaminant.summary_statistics_per_pollutant[, paste(contaminant)] dynamically selects the column using paste(contaminant) (which converts the contaminant variable to a string, likely matching a column name).If rml[, 2] is greater than this maximum value, the block inside the if statement is executed. Otherwise, the else block is executed. If true, it adds a text annotation to a plot using the annotate() function from ggplot2. The x-coordinate of the text, calculated as 78% of the maximum unique factor level (converted to numeric) from the Tissue column. The y-coordinate of the text, calculated as 87% of the scaled maximum value of the contaminant column in summary_statistics_per_pollutant. label: The text to be displayed, taken from the fourth column of the rml object (rml[, 4]). The overall logic for the else part indicates if rml[, 2] is greater than the maximum value in the relevant contaminant column it annotates the plot with a bold, red text label at specified coordinates. Otherwise: it adds a dashed red horizontal line at the rml[, 2] value.
                   {if((rml[,2])>max(summary_statistics_per_pollutant[,paste(contaminant)]))annotate('text', x=max(as.numeric(as.factor(unique(summary_statistics_per_pollutant$Tissue))))*.78, y=max(summary_statistics_per_pollutant[,paste(contaminant)]*1.40)*.87, label= rml[,4],fontface='bold', size=2.2, color="red") else geom_hline(yintercept=rml[,2], linetype="dashed", color = "red")})
-  list3<-append(list(barplot),list3, 0)
+  plots_list<-append(list(barplot),plots_list, 0)
   name3 <-paste(contaminant,"barplot", sep = "")
-  list3names <- append(list3names,name3)
-} else { #If the compact letter displays are the same then it doesnt add the letter displays and does this using the below code.
+  plot_names <- append(plot_names,name3)
+} else { #If the compact letter displays are the same then it doesn't add the letter displays and does this using the below code. This makes for a more readable graph. Therefore the only difference between the two pieces of code in the if-else function is the "geom_text(aes(label=CompactLetters)" which is not in the "else" section onf the code.  
   tissues <- c('liver', 'stomach', 'muscle', 'inksac')
   Colors <-setNames( c('red', 'green','blue'),years)
   barplot <- print(ggplot(summary_statistics_per_pollutant, aes(factor(x=Tissue, levels = tissues), y=!! rlang::sym(paste0(contaminant)), fill=factor(Year, levels=c('2019', '2020', '2021')))) +
@@ -427,16 +465,27 @@ if (all(summary_statistics_per_pollutant[-1, 12] == summary_statistics_per_pollu
                     labs(y = "Concentration mg/kg", x = "Tissue")+
                     labs(fill = "Years")+geom_text(aes(label=N), position = position_dodge(1),size = 3,vjust=2, color='#993300')+
                     {if((rml[,2])>max(summary_statistics_per_pollutant[,paste(contaminant)]))annotate('text', x=max(as.numeric(as.factor(unique(summary_statistics_per_pollutant$Tissue))))*.78, y=max(summary_statistics_per_pollutant[,paste(contaminant)]*1.40)*.87, label= rml[,4],fontface='bold', size=2.2, color="red") else geom_hline(yintercept=rml[,2], linetype="dashed", color = "red")})
-  list3<-append(list(barplot),list3, 0)
+  plots_list<-append(list(barplot),plots_list, 0)
   name3 <-paste(contaminant,"barplot", sep = "")
-  list3names <- append(list3names,name3)
+  plot_names <- append(plot_names,name3)
   
 }
 
-names(list3)<-list3names
+names(plots_list)<-plot_names
 
 }
 
-return(list (plots=list3))
-}
-temporal_analysis_step3 <- temporal_analysis_step3 (temporal_analysis_step2)
+return(list (plots=plots_list))
+}#This function processes the summar statistics data to run the plots for each pullutant then save them in a list.
+
+temporal_analysis_step3 <- temporal_analysis_step3 (temporal_analysis_step2) #Run Function #3
+
+
+
+
+
+# Calling plots for visualization from saved list in the temporal_analysis_step3_dataset.----
+do.call("grid.arrange", c(temporal_analysis_step3$plots[c(1,2,3,4,5, 6, 7,8,9,10)], ncol=5)) #Heavy Metals
+
+do.call("grid.arrange", c(temporal_analysis_step3$plots[c(1,2,3,4,5,7,10)], ncol=4)) #Organic Compounds
+
