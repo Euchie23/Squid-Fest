@@ -7,23 +7,23 @@ library(tidyr)
 library(openxlsx)
 library(stringr)
 
+# STEP 1: LOADING DATASETS TO BE USED IN MAIN FUNCTION IN STEP 4----
+heavy_metal_batch<- read.csv("Heavy Metals Raw Data/HM_2019_LMBatch.csv", header= FALSE)
+dry_weight <- read.csv("Heavy Metals Raw Data/Dry weight data /2019dryweight_HM.csv", header=TRUE)# Has to be changed based on the year
+squid_info <- read.csv("Squid Catch Data/2019_catch_data.csv", header= TRUE) # Has to be changed based on the year
+distance_to_land <- read.csv("Squid Catch Data/Distance_to_land.csv", header= TRUE) # Has to be changed based on the year
 
+# STEP 2: STANDARD CONCENTRATION CALCULATION FUNCTION---- 
+#This standard concentration dataset is used to find the LOQ, LOD, Slope and Intercept for the calibration concentrations in each batch to help classify the concentrations for the squid samples, for said batch, when processing the concentration datsaet later.
+standard_concentration_calculation <- function(batch) {
 #LOADING DATA----
 # loading raw data..CHANGE BASED ON THE YEAR YOU ARE PROCESSING
-results0<- read.csv("Heavy Metals/HM_2019_LMBatch.csv", header= FALSE)
+results0<- batch
 results1 <- as.data.frame(results0)
 results <- results1[,-c(1:4)]
 
-
-#loading raw data for dry weight of samples... CHANGE BASED ON THE YEAR YOU ARE PROCESSING
-dry_weight<-read.csv("Heavy Metals/Dry weight data /2019dryweight_HM.csv", header=TRUE)
-
 #SQUID CATCH DATA...CHANGE BASED ON THE YEAR YOU ARE PROCESSING
-bi<- read.csv("Squid Catch Data/2019_catch_data.csv", header= TRUE)
-
-#distance to Argentina and Falkland Islands.distance to land (dtl)
-dtl<- read.csv("Squid Catch Data/Distance_to_land.csv", header= TRUE)
-
+bi<- squid_info
 
 # STEP 1: CALCULATING STANDARD CONCENTRATION (ppb) FOR EACH BATCH----
 std_conc0 <- results[grep("CalStd", results[,1]), ]# removing all rows that have the calibration standards (top 10 rows)
@@ -104,17 +104,141 @@ colnames(std_conc)[3:12] <- cal_curv
 colnames(std_conc)[13:16] <- c('slope', 'intercept','LOD', 'LOQ')
 std_conc[1,1] <- 'Calibration curve --->'
 
+
+#checking year for dataset based on bi (squid basic information from fishing vessel/catch data) and saving it to year.
+if (26 %in% bi$Area) {
+  year<-2019
+} else if(60 %in% bi$Area){
+  year<-2020
+}else{
+  year<-2021
+}
+
 #WRITING STANDARD CONCENTRATION DAAZSET INTO CSV FILE
-std_conc_res = "Results/2019_Std_concentration_ppb.csv" #CHECK POINT 1 (check std_conc) ----
+std_conc_res = paste0("Results/", year, "_Std_concentration_ppb.csv")#CHECK POINT 1 (check std_conc) ----
 write.table(std_conc, file = std_conc_res, sep = ",",#change the rows index
             append = TRUE, quote = FALSE,
             col.names = FALSE, row.names = FALSE)
+return (list(standard_concentration=std_conc, results=results))
+}
+standard_concentration <- standard_concentration_calculation(heavy_metal_batch) 
 
 
 
+# STEP 3: MINOR FUNCTIONS USED IN PROCESSING VALUES IN DRYWEIGHT DATASET AND CONCENTRATION DATASET----
 
-# STEP 2: CONCENTRATION DATASET MANIPULATION----
+#FUNCTIONS TO HELP MODIFY SAMPLE AREA IN CONCENTRATION DATASET
+sample_area_concentration_dataset <- function(x){#padding 0 to first two digits
+  if (str_detect(substring(x[1],1,2), '_') == TRUE){ 
+    sk=print(paste('0',substring(x[1],1,)))
+    sk<- gsub(" ", "",  sk)
+    x[1] <- gsub(substring(x[1],1,), sk,  x[1])
+  }
+  x[1] =  gsub("-", "_",  x[1])
+  return(x)
+}
 
+#FUNCTIONS TO HELP MODIFY SAMPLE ID IN CONCENTRATION DATASET
+sample_id_concentration_dataset<-function(x){ #padding 0 to second two digits
+  if (str_detect(substring(x[1],4,5), '_') == TRUE){
+    sr=print(paste('0',substring(x[1],4,)))
+    sr<- gsub(" ", "",  sr)
+    x[1] <- gsub(substring(x[1],4,), sr,  x[1])
+  }
+  return(x)
+}
+
+#FUNCTIONS TO HELP MODIFY SAMPLE ID IN DRY WEIGHT DATASET
+sample_id_dry_weight<-function(x){ #padding o to second two digits
+  if (str_detect(substring(x[1],5), "^$") == TRUE){
+    sr=print(paste('_0',substring(x[1],4,)))
+    sr<- gsub(" ", "",  sr)
+    print(paste(sr))
+    x[1] <- gsub(substring(x[1],3,), sr,  x[1])
+    print(paste(x[1]))
+  }
+  return(x)
+}
+
+# FUNCTIONS FOR ADDING DRY WEIGHT TO CONCENTRATION RESULTS IN SAMPLE SEPARATION DATASET (DRY WEIGHT DATASET)
+add_dry_weight<- function(y,x){ #x= dryweight dataset, y=mass_spec_res dataset #WORKS
+  i<-2
+  x=x
+  for(h in 1:nrow(y)){
+    while((str_extract(y[h,1], "(?<=.....)[^_]") == colnames(x)[i]) ==FALSE) {
+      if(i==ncol(x)){
+        i<-2
+      }
+      if((str_extract(y[h,1], "(?<=.....)[^_]") == colnames(x)[i]) ==FALSE) {
+        print(paste("This is h",h, "column", i))
+        i<-i+1
+        print(paste("This is h",h, "column", i))
+      }
+    }
+    if((str_extract(y[h,1], "(?<=.....)[^_]") == colnames(x)[i]) ==TRUE) {
+      for(j in 1:nrow(x)){
+        if ((str_extract(y[h,1], "(?<=)[^_]+[^_]...")== x[j,1]) ==TRUE) { 
+          y[,'DW'][h] <- x[j,i]
+          print(paste("h", h, "matches with", "j",j+1,"column",i))
+        }else{
+          j<-j+1
+        }
+      }
+      
+      if (h == nrow(y)){
+        break
+      }
+    }
+  }
+  return(y)
+}
+
+# FUNCTION MODIFYING AREA FOR SQUID INFORMATION
+sample_area_bi<-function(x){ #padding 0 to Area column
+  if (str_detect(substring(x[1],2), "^$") == TRUE){
+    sr=print(paste('0',substring(x[1],1)))
+    sr<- gsub(" ", "",  sr)
+    print(paste(sr))
+    x[1] <- gsub(substring(x[1],1), sr,  x[1])
+    #print(paste(x[1]))
+    print("Yes I work")
+  }
+  return(x)
+}
+
+
+#FUNCTION MODIFYING ID NUMBER FOR SQUID INFORMATION
+sample_id_bi<-function(x){ #padding 0 to ID_num column
+  if (str_detect(substring(x[2],2), "^$") == TRUE){
+    sr=print(paste('0',substring(x[2],1)))
+    sr<- gsub(" ", "",  sr)
+    print(paste(sr))
+    x[2] <- gsub(substring(x[2],1), sr,  x[2])
+    #print(paste(x[2]))
+  }
+  return(x)
+}
+
+
+
+# STEP 4: ACTIVATING MAIN FUNCTION TO BE USED FOR CONCENTRATION DATASET MANIPULATION---- 
+#In this process the concentrations for the squid samples are calculated and classified with the help of the standard concentration from the previous functions and also the corresponding dry weight, squid catch data and distance to land datasets
+preprocessed_heavy_metals_concentration_dataset <- function(data_list, dry_weight, squid_info, distance_to_land) {
+  
+  #loading raw data for dry weight of samples... CHANGE BASED ON THE YEAR YOU ARE PROCESSING
+  dry_weight <-dry_weight
+  
+  #SQUID CATCH DATA...CHANGE BASED ON THE YEAR YOU ARE PROCESSING
+  bi<- squid_info
+  
+  #distance to Argentina and Falkland Islands.distance to land (dtl)
+  dtl<- distance_to_land
+  
+  # results from previous function
+  results <- data_list$results
+  std_conc <- data_list$standard_concentration
+  
+# data cleaning and manipulation for concentration dataset
 ext_res0 <- results[grep("ample", results[,1]), ]
 ext_res0= ext_res0[-grep("ash", ext_res0[,3]), ]# To remove rows showing wash cycle
 ext_res0 = rbind(results[c(1:2),], ext_res0)
@@ -158,33 +282,14 @@ ext_res4.1$ID = gsub("-", "_", ext_res4.1$ID)
 ext_res4.1$DW<- NA
 ext_res4.1$ID = tolower(ext_res4.1$ID)
 
-#FUNCTIONS TO HELP MODIFY SAMPLE NAMES in concentration dataset
-dcc <- function(x){#padding 0 to first two digits
-  if (str_detect(substring(x[1],1,2), '_') == TRUE){ 
-    sk=print(paste('0',substring(x[1],1,)))
-    sk<- gsub(" ", "",  sk)
-    x[1] <- gsub(substring(x[1],1,), sk,  x[1])
-  }
-  x[1] =  gsub("-", "_",  x[1])
-  return(x)
-}
-
-dc<-function(x){ #padding 0 to second two digits
-  if (str_detect(substring(x[1],4,5), '_') == TRUE){ 
-    sr=print(paste('0',substring(x[1],4,)))
-    sr<- gsub(" ", "",  sr)
-    x[1] <- gsub(substring(x[1],4,), sr,  x[1]) 
-  }
-  return(x)
-}
-
-rw <- apply(ext_res4.1, MARGIN = 1, dcc)
-rw1<- apply(t(rw), MARGIN = 1, dc)
+# #FUNCTIONS TO HELP MODIFY SAMPLE NAMES in concentration dataset
+rw <- apply(ext_res4.1, MARGIN = 1, sample_area_concentration_dataset)
+rw1<- apply(t(rw), MARGIN = 1, sample_id_concentration_dataset)
 ext_res4.1.1 <- data.frame(t(rw1))
 
 
 
-# STEP 3: ADDING DRY WEIGHT DATA TO CONCENTRATION DATASET----
+# ADDING DRY WEIGHT DATA TO CONCENTRATION DATASET
 HM.1 <- dry_weight 
 HM.2 <-data.frame(HM.1)
 if(colnames(dry_weight)[ncol(dry_weight)]!= "Ink.sac..mg."){
@@ -193,52 +298,12 @@ if(colnames(dry_weight)[ncol(dry_weight)]!= "Ink.sac..mg."){
 colnames(HM.2) <- c("ID","s","l","m","i")
 }
 
-dc<-function(x){ #padding o to second two digits
-  if (str_detect(substring(x[1],5), "^$") == TRUE){
-    sr=print(paste('_0',substring(x[1],4,)))
-    sr<- gsub(" ", "",  sr)
-    print(paste(sr))
-    x[1] <- gsub(substring(x[1],3,), sr,  x[1])
-    print(paste(x[1]))
-  }
-  return(x)
-}
-HM.3<-data.frame(t(apply(HM.2,1, dc)))
+
+HM.3<-data.frame(t(apply(HM.2,1, sample_id_dry_weight)))
 HM.3$ID <- gsub("-", "_", HM.3$ID)
 
-#ADDING DRY WEIGHT TO EXTRACTION RESULTS DATAFRAME FROM SAMPLE SPARATION DATASET
-findw<- function(y){ #x= dryweight dataset, y=mass_spec_res dataset #WORKS
-  i<-2
-  x=HM.3
-  for(h in 1:nrow(y)){
-    while((str_extract(y[h,1], "(?<=.....)[^_]") == colnames(x)[i]) ==FALSE) {
-      if(i==ncol(x)){
-        i<-2
-      }
-      if((str_extract(y[h,1], "(?<=.....)[^_]") == colnames(x)[i]) ==FALSE) {
-        print(paste("This is h",h, "column", i))
-        i<-i+1
-        print(paste("This is h",h, "column", i))
-      }
-    }
-    if((str_extract(y[h,1], "(?<=.....)[^_]") == colnames(x)[i]) ==TRUE) {
-      for(j in 1:nrow(x)){
-        if ((str_extract(y[h,1], "(?<=)[^_]+[^_]...")== x[j,1]) ==TRUE) { 
-          y[,'DW'][h] <- x[j,i]
-          print(paste("h", h, "matches with", "j",j+1,"column",i))
-        }else{
-          j<-j+1
-        }
-      }
-      
-      if (h == nrow(y)){
-        break
-      }
-    }
-  }
-  return(y)
-}
-ext_res4.2 <- findw(ext_res4.1.1)
+# #ADDING DRY WEIGHT TO EXTRACTION RESULTS DATAFRAME FROM SAMPLE SEPARATION DATASET
+ext_res4.2 <- add_dry_weight(ext_res4.1.1,HM.3 )
 ext_res4.2 <- ext_res4.2 %>% relocate(DW, .after = ID)
 colnames(ext_res4.2) <- colnames(ext_rows_CPS)
 
@@ -249,7 +314,7 @@ colnames(ext_res5) <- colnames(ext_rows_CPS)
 
 
 
-#STEP 4: CONCENTRATION CALCULATIONS----
+#CONCENTRATION CALCULATIONS
 #MAKING COLUMNS NUMERIC AGAIN
 ext_res6.2 <- matrix(unlist(ext_res5), ncol = ncol(ext_res5))
 ext_res6.3 <- data.frame(matrix(as.numeric(ext_res6.2[c(2:nrow(ext_res6.2)),c(2:ncol(ext_res6.2))]), ncol = ncol(ext_res6.2)-1))
@@ -297,7 +362,7 @@ for (f in seq(2, nrow(std_conc), by = 4)){
       ext_res6.5[z,'First_Status'] = "not detected"
     }
   } 
-  (print(c(f,z)))
+  #(print(c(f,z)))
   if(f == nrow(std_conc)-3){
     break
   }
@@ -335,7 +400,7 @@ for (ff in seq(2, nrow(std_conc), by = 4)){
       ext_res6.5[zz,'Final_Status'] = "detected"
     }
   }
-    (print(c(ff,zz,bz)))
+    #(print(c(ff,zz,bz)))
     if(ff == nrow(std_conc)-3){
       break
     }
@@ -356,7 +421,7 @@ for(i in seq(from=1, to=nrow(ext_res6.5), by=nrow(ext_res6.4))) {
   s<-rbind(ext_res6.5[i,k], ext_res6.5[u,k])
   ext_res7 = cbind(ext_res7, s)
   u<-u+nrow(ext_res6.4)
-  (print(i))
+  #(print(i))
   if (i == nrow(ext_res6.5)-nrow(ext_res6.4)+1) {
     break
   }
@@ -409,40 +474,16 @@ for (ro in 1:nrow(ext_res7.7)){
 
 
 
-#STEP 5: ADDING BASIC SQUID INFORMATION FROM THE FISHING VESSEL AND LAB AND APPENDING TO BATCHES----
+#ADDING BASIC SQUID INFORMATION FROM THE FISHING VESSEL AND LAB AND APPENDING TO BATCHES
 
 #FOR SETTING UP CATCH DATA F0R SQUIDS MAKE SURE ID IS A CHARACTER
 bi$ID <- as.character(bi$ID)
 bi$Area <- as.character(bi$Area)
 #AREA
-dck0<-function(x){ #padding 0 to Area column
-  if (str_detect(substring(x[1],2), "^$") == TRUE){
-    sr=print(paste('0',substring(x[1],1)))
-    sr<- gsub(" ", "",  sr)
-    print(paste(sr))
-    x[1] <- gsub(substring(x[1],1), sr,  x[1])
-    print(paste(x[1]))
-    print("Yes I work")
-  }
-  return(x)
-}
-
-
-#ID NUMBER
-dck<-function(x){ #padding 0 to ID_num column
-  if (str_detect(substring(x[2],2), "^$") == TRUE){
-    sr=print(paste('0',substring(x[2],1)))
-    sr<- gsub(" ", "",  sr)
-    print(paste(sr))
-    x[2] <- gsub(substring(x[2],1), sr,  x[2])
-    print(paste(x[2]))
-  }
-  return(x)
-}
 
 #formatting samples names to match concentration dataset
-bi1<-data.frame(t(apply(bi,1, dck0)))
-binfo<-data.frame(t(apply(bi1,1, dck)))
+bi1<-data.frame(t(apply(bi,1, sample_area_bi)))
+binfo<-data.frame(t(apply(bi1,1, sample_id_bi)))
 
 #ADDING BASIC INFO TO DATASET
 ext_res7.7$Gender <- NA
@@ -480,7 +521,7 @@ while(h!= nrow(ext_res7.7)+1){
 
 #formatting samples names to match concentration dataset
 dtl$Area. <- as.character(dtl$Area.)
-dtl1<-data.frame(t(apply(dtl,1, dck0)))
+dtl1<-data.frame(t(apply(dtl,1, sample_area_bi)))
 #dtl2<-data.frame(t(apply(dtl1,1, dck)))
 #ADDING distance to Argentina and Falkland Islands
 ext_res7.7$dta_km <- NA
@@ -500,6 +541,7 @@ while(h!= nrow( ext_res7.7)+1){
   }
 }
 
+#Checking year based on ID numbers
 if (26 %in% ext_res7.7$Area) {
   ext_res7.7$Year<-2019
 } else if(60 %in% ext_res7.7$Area){
@@ -515,7 +557,7 @@ ext_res7.7=ext_res7.7[,c(1,2, 25, 13:16, 23:24 , 17:22, 3:12)]
 colnames(ext_res7.7)[16:20] <- substring(colnames(ext_res7.7[16:20]),3,4)
 colnames(ext_res7.7)[21:25] <- substring(colnames(ext_res7.7[21:25]),4,5)
 
-#CHECK POINT 3 (check ext_res7.7) ----
+#CHECK POINT 3 (check ext_res7.7) 
 ext_res7.7
 #____________________________________________________________
 #Final_HMresults_mgkg.csv"
@@ -527,3 +569,8 @@ write.table(ext_res7.7, file = Final_res, sep = ",",
             append = TRUE, quote = FALSE, 
             col.names = TRUE, row.names = FALSE) #CHANGE COLUMN NAMES TO FALSE AFTER PROCESSING FIRST BATCH
 
+return( list(Results=ext_res7.7,squid_catch_data=binfo, distance_to_land=dtl1))
+}
+
+# STEP 5: RUNNING MAIN FUNCTION WITH REQUIRED DATASETS----
+heavy_metals_concentration_dataset <- preprocessed_heavy_metals_concentration_dataset(standard_concentration, dry_weight, squid_info, distance_to_land) 
