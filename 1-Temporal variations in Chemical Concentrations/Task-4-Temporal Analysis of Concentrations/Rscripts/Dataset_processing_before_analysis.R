@@ -19,7 +19,7 @@ process_dataset <- function(data, keep_LOQ_values=FALSE) {
       return(x)
     }
     
-    # Apply the 'dcc' function and remove "." from the 'Area' column
+    # Apply the 'ID_num_modifier' function and remove "." from the 'Area' column
     data <- as.data.frame(t(apply(data, MARGIN = 1, ID_num_modifier)))
     data$ID_num <- gsub("\\.", "", data$ID_num)
     
@@ -209,10 +209,10 @@ process_dataset <- function(data, keep_LOQ_values=FALSE) {
 # NOTE FOR THE BELOW FUNCTIONS:
 #If you choose FALSE for "keep_LOQ_values", it will be replaced with 0, then removed later in the data analysis based on the user's input, when asked if you want to to keep the original LOQ values if you choose "Yes" it keeps the original values, if no it asks for a multiplier. This is because some researchers use half or maybe quarter of the LOQ values when running the analysis.
 
-# Example for Heavy Metals dataset
+# Data Processing for Heavy Metals dataset
 heavymetals_data <- read.csv("Final_Results_From_Task 1/Final_HMresults_mgkg.csv", header = TRUE)
 processed_hm_data <- process_dataset(heavymetals_data, keep_LOQ_values = TRUE) 
 
-# Example for Organic Compounds dataset
-sm_data <- read.csv("Final_Results_From_Task 1/Final_SMresults_mgkg.csv", header = TRUE)
-processed_sm_data <- process_dataset(sm_data, keep_LOQ_values = TRUE)
+# Data Processing for Organic Compounds dataset
+oc_data <- read.csv("Final_Results_From_Task 1/Final_OCresults_mgkg.csv", header = TRUE)
+processed_oc_data <- process_dataset(oc_data, keep_LOQ_values = TRUE)
