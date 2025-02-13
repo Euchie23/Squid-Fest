@@ -32,9 +32,9 @@ data_manipulation1<- function(x){
 #1 FUNCTIONS TO HELP MODIFY SAMPLE IDS FOR CONCENTRATION DATASET
 sample_area_concentration_dataset <- function(x){#padding 0 to first two digits
   if (str_detect(substring(x[1],1,2), '_') == TRUE){ 
-    sk=print(paste('0',substring(x[1],1,)))
-    sk<- gsub(" ", "",  sk)
-    x[1] <- gsub(substring(x[1],1,), sk,  x[1])
+    modified_area=print(paste('0',substring(x[1],1,)))
+    modified_area<- gsub(" ", "",  modified_area)
+    x[1] <- gsub(substring(x[1],1,), modified_area,  x[1])
   }
   x[1] =  gsub("-", "_",  x[1])
   return(x)
@@ -42,9 +42,9 @@ sample_area_concentration_dataset <- function(x){#padding 0 to first two digits
 
 sample_id_concentration_dataset <-function(x){ #padding 0 to second two digits
   if (str_detect(substring(x[1],4,5), '_') == TRUE){ 
-    sr=print(paste('0',substring(x[1],4,)))
-    sr<- gsub(" ", "",  sr)
-    x[1] <- gsub(substring(x[1],4,), sr,  x[1]) 
+    modified_id=print(paste('0',substring(x[1],4,)))
+    modified_id<- gsub(" ", "",  modified_id)
+    x[1] <- gsub(substring(x[1],4,), modified_id,  x[1]) 
   }
   return(x)
 }
@@ -71,18 +71,18 @@ sample_area_dry_weight <- function(x){#padding 0 to first two digits
   x[1] =  gsub("-", "_",  x[1])
   print(paste(x[1]))
   if (str_detect(substring(x[1],1,2), '_') == TRUE){
-    sk=print(paste('0',substring(x[1],1,)))
-    sk<- gsub(" ", "",  sk)
-    x[1] <- gsub(substring(x[1],1,), sk,  x[1])
+    modified_area=print(paste('0',substring(x[1],1,)))
+    modified_area<- gsub(" ", "",  modified_area)
+    x[1] <- gsub(substring(x[1],1,), modified_area,  x[1])
   }
   return(x)
 }
 
 sample_id_dry_weight <-function(x){ #padding 0 to second two digits
   if (str_detect(substring(x[1],5), "^$") == TRUE){
-    sr=print(paste('_0',substring(x[1],4,)))
-    sr<- gsub(" ", "",  sr)
-    x[1] <- gsub(substring(x[1],3,), sr,  x[1])
+    modified_id=print(paste('_0',substring(x[1],4,)))
+    modified_id<- gsub(" ", "",  modified_id)
+    x[1] <- gsub(substring(x[1],3,), modified_id,  x[1])
   }
   return(x)
 }
@@ -129,10 +129,10 @@ add_dry_weight <- function(y,x){ #x= dryweight dataset, y=mass_spec_res
 #FUNCTION TO MODIFY SAMPLE IDS FOR DTL AND BI DATASET 
 sample_area_bi_and_dtl_dataset<-function(x){ #padding 0 TO AREA COLUMN
   if (str_detect(substring(x[1],2), "^$") == TRUE){
-    sr=print(paste('0',substring(x[1],1)))
-    sr<- gsub(" ", "",  sr)
-    print(paste(sr))
-    x[1] <- gsub(substring(x[1],1), sr,  x[1])
+    modified_area=print(paste('0',substring(x[1],1)))
+    modified_area<- gsub(" ", "",  modified_area)
+    print(paste(modified_area))
+    x[1] <- gsub(substring(x[1],1), modified_area,  x[1])
     print(paste(x[1]))
   }
   return(x)
@@ -141,10 +141,10 @@ sample_area_bi_and_dtl_dataset<-function(x){ #padding 0 TO AREA COLUMN
 #ID NUMBER
 sample_id_bi_and_dtl_dataset <-function(x){ #padding 0 to ID_NUMBER COLUMN
   if (str_detect(substring(x[2],2), "^$") == TRUE){
-    sr=print(paste('0',substring(x[2],1)))
-    sr<- gsub(" ", "",  sr)
-    print(paste(sr))
-    x[2] <- gsub(substring(x[2],1), sr,  x[2])
+    modified_id=print(paste('0',substring(x[2],1)))
+    modified_id <- gsub(" ", "",  modified_id)
+    print(paste(modified_id))
+    x[2] <- gsub(substring(x[2],1), modified_id,  x[2])
     print(paste(x[2]))
   }
   return(x)

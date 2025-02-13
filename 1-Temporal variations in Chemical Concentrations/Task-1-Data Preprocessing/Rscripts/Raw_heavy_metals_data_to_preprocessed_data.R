@@ -8,10 +8,11 @@ library(openxlsx)
 library(stringr)
 
 # STEP 1: LOADING DATASETS TO BE USED IN MAIN FUNCTION IN STEP 4----
-heavy_metal_batch<- read.csv("Heavy Metals Raw Data/HM_2019_LMBatch.csv", header= FALSE)
-dry_weight <- read.csv("Heavy Metals Raw Data/Dry weight data /2019dryweight_HM.csv", header=TRUE)# Has to be changed based on the year
-squid_info <- read.csv("Squid Catch Data/2019_catch_data.csv", header= TRUE) # Has to be changed based on the year
-distance_to_land <- read.csv("Squid Catch Data/Distance_to_land.csv", header= TRUE) # Has to be changed based on the year
+heavy_metal_batch<- read.csv("Datasets/Heavy Metals Raw Data/HM_2019_LMBatch.csv", header= FALSE)
+dry_weight <- read.csv("Datasets/Heavy Metals Raw Data/Dry weight data /2019dryweight_HM.csv", header=TRUE)# Has to be changed based on the year
+squid_info <- read.csv("Datasets/Squid Catch Data/2019_catch_data.csv", header= TRUE) # Has to be changed based on the year
+distance_to_land <- read.csv("Datasets/Squid Catch Data/Distance_to_land.csv", header= TRUE) # Has to be changed based on the year
+
 
 # STEP 2: STANDARD CONCENTRATION CALCULATION FUNCTION---- 
 #This standard concentration dataset is used to find the LOQ, LOD, Slope and Intercept for the calibration concentrations in each batch to help classify the concentrations for the squid samples, for said batch, when processing the concentration datsaet later.
@@ -115,7 +116,7 @@ if (26 %in% bi$Area) {
 }
 
 #WRITING STANDARD CONCENTRATION DAAZSET INTO CSV FILE
-std_conc_res = paste0("Results/", year, "_Std_concentration_ppb.csv")#CHECK POINT 1 (check std_conc) ----
+std_conc_res = paste0("Datasets/Results/", year, "_Std_concentration_ppb.csv")#CHECK POINT 1 (check std_conc) ----
 write.table(std_conc, file = std_conc_res, sep = ",",#change the rows index
             append = TRUE, quote = FALSE,
             col.names = FALSE, row.names = FALSE)
@@ -126,13 +127,12 @@ standard_concentration <- standard_concentration_calculation(heavy_metal_batch)
 
 
 # STEP 3: MINOR FUNCTIONS USED IN PROCESSING VALUES IN DRYWEIGHT DATASET AND CONCENTRATION DATASET----
-
 #FUNCTIONS TO HELP MODIFY SAMPLE AREA IN CONCENTRATION DATASET
 sample_area_concentration_dataset <- function(x){#padding 0 to first two digits
   if (str_detect(substring(x[1],1,2), '_') == TRUE){ 
-    sk=print(paste('0',substring(x[1],1,)))
-    sk<- gsub(" ", "",  sk)
-    x[1] <- gsub(substring(x[1],1,), sk,  x[1])
+    modified_area=print(paste('0',substring(x[1],1,)))
+    modified_area<- gsub(" ", "",  modified_area)
+    x[1] <- gsub(substring(x[1],1,), modified_area,  x[1])
   }
   x[1] =  gsub("-", "_",  x[1])
   return(x)
@@ -141,9 +141,9 @@ sample_area_concentration_dataset <- function(x){#padding 0 to first two digits
 #FUNCTIONS TO HELP MODIFY SAMPLE ID IN CONCENTRATION DATASET
 sample_id_concentration_dataset<-function(x){ #padding 0 to second two digits
   if (str_detect(substring(x[1],4,5), '_') == TRUE){
-    sr=print(paste('0',substring(x[1],4,)))
-    sr<- gsub(" ", "",  sr)
-    x[1] <- gsub(substring(x[1],4,), sr,  x[1])
+    modified_id=print(paste('0',substring(x[1],4,)))
+    modified_id<- gsub(" ", "",  modified_id)
+    x[1] <- gsub(substring(x[1],4,), modified_id,  x[1])
   }
   return(x)
 }
@@ -151,10 +151,10 @@ sample_id_concentration_dataset<-function(x){ #padding 0 to second two digits
 #FUNCTIONS TO HELP MODIFY SAMPLE ID IN DRY WEIGHT DATASET
 sample_id_dry_weight<-function(x){ #padding o to second two digits
   if (str_detect(substring(x[1],5), "^$") == TRUE){
-    sr=print(paste('_0',substring(x[1],4,)))
-    sr<- gsub(" ", "",  sr)
-    print(paste(sr))
-    x[1] <- gsub(substring(x[1],3,), sr,  x[1])
+    modified_id=print(paste('_0',substring(x[1],4,)))
+    modified_id<- gsub(" ", "",  modified_id)
+    print(paste(modified_id))
+    x[1] <- gsub(substring(x[1],3,), modified_id,  x[1])
     print(paste(x[1]))
   }
   return(x)
@@ -196,12 +196,10 @@ add_dry_weight<- function(y,x){ #x= dryweight dataset, y=mass_spec_res dataset #
 # FUNCTION MODIFYING AREA FOR SQUID INFORMATION
 sample_area_bi<-function(x){ #padding 0 to Area column
   if (str_detect(substring(x[1],2), "^$") == TRUE){
-    sr=print(paste('0',substring(x[1],1)))
-    sr<- gsub(" ", "",  sr)
-    print(paste(sr))
-    x[1] <- gsub(substring(x[1],1), sr,  x[1])
-    #print(paste(x[1]))
-    print("Yes I work")
+    modified_area=print(paste('0',substring(x[1],1)))
+    modified_area<- gsub(" ", "",  modified_area)
+    print(paste(modified_area))
+    x[1] <- gsub(substring(x[1],1), modified_area,  x[1])
   }
   return(x)
 }
@@ -210,10 +208,10 @@ sample_area_bi<-function(x){ #padding 0 to Area column
 #FUNCTION MODIFYING ID NUMBER FOR SQUID INFORMATION
 sample_id_bi<-function(x){ #padding 0 to ID_num column
   if (str_detect(substring(x[2],2), "^$") == TRUE){
-    sr=print(paste('0',substring(x[2],1)))
-    sr<- gsub(" ", "",  sr)
-    print(paste(sr))
-    x[2] <- gsub(substring(x[2],1), sr,  x[2])
+    modified_id=print(paste('0',substring(x[2],1)))
+    sr<- gsub(" ", "",  modified_id)
+    print(paste(modified_id))
+    x[2] <- gsub(substring(x[2],1), modified_id,  x[2])
     #print(paste(x[2]))
   }
   return(x)
@@ -564,7 +562,7 @@ ext_res7.7
 
 
 #APPENDING FUTURE BATCHES TO MAKE ONE EXTRACTION RESULTS FILE
-Final_res = "Results/Final_HMresults_mgkg.csv"
+Final_res = "Datasets/Results/Final_HMresults_mgkg.csv"
 write.table(ext_res7.7, file = Final_res, sep = ",",
             append = TRUE, quote = FALSE, 
             col.names = TRUE, row.names = FALSE) #CHANGE COLUMN NAMES TO FALSE AFTER PROCESSING FIRST BATCH
