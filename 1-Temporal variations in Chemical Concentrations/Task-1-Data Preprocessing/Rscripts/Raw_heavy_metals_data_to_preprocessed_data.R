@@ -8,9 +8,9 @@ library(openxlsx)
 library(stringr)
 
 # STEP 1: LOADING DATASETS TO BE USED IN MAIN FUNCTION IN STEP 4----
-heavy_metal_batch<- read.csv("Datasets/Heavy Metals Raw Data/HM_2019_LMBatch.csv", header= FALSE)
-dry_weight <- read.csv("Datasets/Heavy Metals Raw Data/Dry weight data /2019dryweight_HM.csv", header=TRUE)# Has to be changed based on the year
-squid_info <- read.csv("Datasets/Squid Catch Data/2019_catch_data.csv", header= TRUE) # Has to be changed based on the year
+heavy_metal_batch<- read.csv("Datasets/Heavy Metals Raw Data/HM_2020_LMBatch.csv", header= FALSE)
+dry_weight <- read.csv("Datasets/Heavy Metals Raw Data/Dry weight data /2020dryweight_HM.csv", header=TRUE)# Has to be changed based on the year
+squid_info <- read.csv("Datasets/Squid Catch Data/2020_catch_data.csv", header= TRUE) # Has to be changed based on the year
 distance_to_land <- read.csv("Datasets/Squid Catch Data/Distance_to_land.csv", header= TRUE) # Has to be changed based on the year
 
 
@@ -209,7 +209,7 @@ sample_area_bi<-function(x){ #padding 0 to Area column
 sample_id_bi<-function(x){ #padding 0 to ID_num column
   if (str_detect(substring(x[2],2), "^$") == TRUE){
     modified_id=print(paste('0',substring(x[2],1)))
-    sr<- gsub(" ", "",  modified_id)
+    modified_id<- gsub(" ", "",  modified_id)
     print(paste(modified_id))
     x[2] <- gsub(substring(x[2],1), modified_id,  x[2])
     #print(paste(x[2]))
@@ -309,7 +309,8 @@ colnames(ext_res4.2) <- colnames(ext_rows_CPS)
 ext_res5 <- data.frame(rbind(ext_rows_CPS, ext_res4.2))
 colnames(ext_res5) <- colnames(ext_rows_CPS)
 
-
+print('1')
+print(ext_res5)
 
 
 #CONCENTRATION CALCULATIONS
@@ -471,13 +472,13 @@ for (ro in 1:nrow(ext_res7.7)){
 
 
 
-
 #ADDING BASIC SQUID INFORMATION FROM THE FISHING VESSEL AND LAB AND APPENDING TO BATCHES
 
 #FOR SETTING UP CATCH DATA F0R SQUIDS MAKE SURE ID IS A CHARACTER
 bi$ID <- as.character(bi$ID)
 bi$Area <- as.character(bi$Area)
 #AREA
+
 
 #formatting samples names to match concentration dataset
 bi1<-data.frame(t(apply(bi,1, sample_area_bi)))
@@ -517,6 +518,8 @@ while(h!= nrow(ext_res7.7)+1){
   }
 }
 
+print('4')
+print(ext_res7.7)
 #formatting samples names to match concentration dataset
 dtl$Area. <- as.character(dtl$Area.)
 dtl1<-data.frame(t(apply(dtl,1, sample_area_bi)))
@@ -556,7 +559,7 @@ colnames(ext_res7.7)[16:20] <- substring(colnames(ext_res7.7[16:20]),3,4)
 colnames(ext_res7.7)[21:25] <- substring(colnames(ext_res7.7[21:25]),4,5)
 
 #CHECK POINT 3 (check ext_res7.7) 
-ext_res7.7
+
 #____________________________________________________________
 #Final_HMresults_mgkg.csv"
 
@@ -565,7 +568,7 @@ ext_res7.7
 Final_res = "Datasets/Results/Final_HMresults_mgkg.csv"
 write.table(ext_res7.7, file = Final_res, sep = ",",
             append = TRUE, quote = FALSE, 
-            col.names = TRUE, row.names = FALSE) #CHANGE COLUMN NAMES TO FALSE AFTER PROCESSING FIRST BATCH
+            col.names = FALSE, row.names = FALSE) #CHANGE COLUMN NAMES TO FALSE AFTER PROCESSING FIRST BATCH
 
 return( list(Results=ext_res7.7,squid_catch_data=binfo, distance_to_land=dtl1))
 }
