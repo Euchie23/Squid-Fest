@@ -221,7 +221,7 @@ sample_id_bi<-function(x){ #padding 0 to ID_num column
 
 # STEP 4: ACTIVATING MAIN FUNCTION TO BE USED FOR CONCENTRATION DATASET MANIPULATION---- 
 #In this process the concentrations for the squid samples are calculated and classified with the help of the standard concentration from the previous functions and also the corresponding dry weight, squid catch data and distance to land datasets
-preprocessed_heavy_metals_concentration_dataset <- function(data_list, dry_weight, squid_info, distance_to_land) {
+preprocessed_heavy_metals_concentration_dataset <- function(data_list, dry_weight, squid_info, distance_to_land, col_names) {
   
   #loading raw data for dry weight of samples... CHANGE BASED ON THE YEAR YOU ARE PROCESSING
   dry_weight <-dry_weight
@@ -568,10 +568,10 @@ colnames(ext_res7.7)[21:25] <- substring(colnames(ext_res7.7[21:25]),4,5)
 Final_res = "Datasets/Results/Final_HMresults_mgkg.csv"
 write.table(ext_res7.7, file = Final_res, sep = ",",
             append = TRUE, quote = FALSE, 
-            col.names = FALSE, row.names = FALSE) #CHANGE COLUMN NAMES TO FALSE AFTER PROCESSING FIRST BATCH
+            col.names = col_names, row.names = FALSE) #CHANGE COLUMN NAMES TO FALSE AFTER PROCESSING FIRST BATCH
 
 return( list(Results=ext_res7.7,squid_catch_data=binfo, distance_to_land=dtl1))
 }
 
 # STEP 5: RUNNING MAIN FUNCTION WITH REQUIRED DATASETS----
-heavy_metals_concentration_dataset <- preprocessed_heavy_metals_concentration_dataset(standard_concentration, dry_weight, squid_info, distance_to_land) 
+heavy_metals_concentration_dataset <- preprocessed_heavy_metals_concentration_dataset(standard_concentration, dry_weight, squid_info, distance_to_land, col_names = FALSE) 

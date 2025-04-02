@@ -8,6 +8,7 @@ library(tibble)
 
 
 #Data Processor Function before doing analysis
+#IT is recommended that the 'Keep_LOQ_values' argument remain as FALSE to remove all values below blank control (BB) or LOQ (BLOQ) to get a more accurate figure for the number of outliers within the dataset for the data distribution otherwise it will also classify values that are BB or BLOQ  as outliers leading to couble counting.
 process_dataset_for_data_distribution <- function(data, keep_LOQ_values=FALSE) {
   # Check if the dataset is Heavy Metals (Ag is in the 16th column)
   if (grepl("Fe|Ag", colnames(data)[16])) {
@@ -99,7 +100,7 @@ process_dataset_for_data_distribution <- function(data, keep_LOQ_values=FALSE) {
         if (is.na(multiplier)) {
           stop("Invalid multiplier. Please enter a numeric value.")
         }
-      
+        
         data1[, 16:25] <- lapply(16:25, function(index) {
           column <- data[[index]]  # Extract the column
           # Identify which values contain "BLOQ" or "BB"
@@ -212,21 +213,21 @@ process_dataset_for_data_distribution <- function(data, keep_LOQ_values=FALSE) {
         if (is.na(multiplier)) {
           stop("Invalid multiplier. Please enter a numeric value.")
         }
-          data1[, 16:19] <- lapply(16:19, function(index) {
-            column <- data[[index]]  # Extract the column
-            # Identify which values contain "BLOQ" or "BB"
-            bloq_bb_mask <- grepl(" BLOQ| BB", column)
-            # Remove "BLOQ" and "BB" text and convert to numeric
-            cleaned_column <- suppressWarnings(as.numeric(gsub(" BLOQ| BB", "", column)))
-            
-            # Multiply only the masked values by the multiplier
-            if (is.numeric(multiplier)) {
-              cleaned_column[bloq_bb_mask] <- cleaned_column[bloq_bb_mask] * multiplier
-            }
-            
-            # Return the updated column
-            return(cleaned_column)
-          })
+        data1[, 16:19] <- lapply(16:19, function(index) {
+          column <- data[[index]]  # Extract the column
+          # Identify which values contain "BLOQ" or "BB"
+          bloq_bb_mask <- grepl(" BLOQ| BB", column)
+          # Remove "BLOQ" and "BB" text and convert to numeric
+          cleaned_column <- suppressWarnings(as.numeric(gsub(" BLOQ| BB", "", column)))
+          
+          # Multiply only the masked values by the multiplier
+          if (is.numeric(multiplier)) {
+            cleaned_column[bloq_bb_mask] <- cleaned_column[bloq_bb_mask] * multiplier
+          }
+          
+          # Return the updated column
+          return(cleaned_column)
+        })
         # Return the updated dataset
         return(list(dataset_with_numerical_values=data1, dataset_with_categorical_values=data2))
       }
@@ -238,21 +239,22 @@ process_dataset_for_data_distribution <- function(data, keep_LOQ_values=FALSE) {
 
 
 # Data Processing for Heavy Metals dataset
-heavymetals_data <- read.csv("Datasets/Results/Final_HMresults_mgkg.csv", header = TRUE)
-datasets_for_heavy_metals_data_distribution <- process_dataset_for_data_distribution(heavymetals_data, keep_LOQ_values = TRUE) 
+heavymetals_data <- read.csv("2-Data Distribution/Final_Results_From_Task 1/Final_HMresults_mgkg.csv", header = TRUE)
+datasets_for_heavy_metals_data_distribution <- process_dataset_for_data_distribution(heavymetals_data, keep_LOQ_values = FALSE) 
 
 
 # Data Processing for Organic Compounds dataset
-organiccompounds_data <- read.csv("Datasets/Results/Final_OCresults_mgkg.csv", header = TRUE)
-datasets_for_organic_compounds_data_distribution <- process_dataset_for_data_distribution(organiccompounds_data, keep_LOQ_values = TRUE)
+organiccompounds_data <- read.csv("2-Data Distribution/Final_Results_From_Task 1/Final_OCresults_mgkg.csv", header = TRUE)
+datasets_for_organic_compounds_data_distribution <- process_dataset_for_data_distribution(organiccompounds_data, keep_LOQ_values = FALSE)
+
 
 
 
 #FUNCTIONS FOR PROCESSING DATA
 
-#This function iterates through the dataset_for_numerical_values_per_tissue by row in the concentration column. If the value is three times the mean of the other values within that dataset then it is flagged as an outlier. It also counts the number of outliers for each tissue in each year. 
+#This helper function iterates through the dataset_for_numerical_values_per_tissue by row in the concentration column. If the value is three times the mean of the other values within that dataset then it is flagged as an outlier. It also counts the number of outliers for each tissue in each year. 
 #x=dataset_for_numerical_values_per_tissue which has already been subsetted per pollutant 
-#y=input_dataset_numerical_values which is the initial dataset before being subsetted.
+#y=input_dataset_numerical_values which is the initial dataset loaded before being subsetted.
 outliercheck <- function(x, y){
   if (grepl("Fe|Ag", colnames(y)[16])) {
     column_range <- 16:25
@@ -300,19 +302,19 @@ outliercheck <- function(x, y){
 }
 
 
-#This function iterates uses the data_list input and subsets both the numerical and categoral datasets per year, pollutant and tissue for detailed processing of data distribution which includes summarizing the data per year, tissue and pollutant to find out which and how many of the concentration values using the classification categories (detected, below limit of quantification (BLOQ) and below limit of detection (BLOD) and Below blank control (BB)). In addition it uses the outliercheck function to detect and summarize the number of outliers in each subsetted dataset and returns summarized dataframes showing the detected outlier values and final datasets where the outliers are removed or not based on the users preference. It also returns the summarized categorical dataset showing the number of values for each category per year, pollutant and tissue.
-summarizing_and_subsetting_datasets <- function (x, y, classification_categories, status_levels, column_range, distribution_using){
+#This helper function iterates uses the data_list input and subsets both the numerical and categoral datasets per year, pollutant and tissue for detailed processing of data distribution which includes summarizing the data per year, tissue and pollutant to find out which and how many of the concentration values using the classification categories (detected, below limit of quantification (BLOQ) and below limit of detection (BLOD) and Below blank control (BB)). In addition it uses the outliercheck function to detect and summarize the number of outliers in each subsetted dataset and returns summarized dataframes showing the detected outlier values and final datasets where the outliers are removed or not based on the users preference. It also returns the summarized categorical dataset showing the number of values for each category per year, pollutant and tissue.
+summarizing_and_subsetting_datasets <- function (x, y, classification_categories, status_levels, column_range){
   
   
   #LOADING INPUT DATASETS
   #Loading datasets from lists to be subsetted later for data distribution processing
   Subset_of_dataset_with_numerical_values <- x[,c(column_range,1,3,6)]
   Subset_of_dataset_with_categorical_values <- y[,c(column_range,1,3,6)]
-
   
- 
+  
+  
   input_dataset_numerical_values<-x #saving the dataset_with_numerical_values as the input dataset for outliercheck and fiinal_dataset creation
- #print(input_dataset_numerical_values)
+  #print(input_dataset_numerical_values)
   
   #loading classification categories
   {if(!is.na(classification_categories[1]))category1<-(classification_categories[1])}
@@ -337,12 +339,12 @@ summarizing_and_subsetting_datasets <- function (x, y, classification_categories
   
   long_dataset_with_numerical_values_no_zero <- Subset_of_dataset_with_numerical_values %>% pivot_longer(all_of(column_names), names_to = "pollutant", values_to = "concentration")%>%subset(concentration !=0)
   
-  long_dataset_with_numerical_values_with_zero <- Subset_of_dataset_with_numerical_values %>% pivot_longer(all_of(column_names), names_to = "pollutant", values_to = "concentration")
+  # long_dataset_with_numerical_values_with_zero <- Subset_of_dataset_with_numerical_values %>% pivot_longer(all_of(column_names), names_to = "pollutant", values_to = "concentration")
   
   
-
+  
   #CREATING EMPTY DATAFRAMES
-
+  
   
   #Empty dataframe to store the accumulated yearly total for the categorical values to be visualized later
   summarized_categorical_values_full <- data.frame(matrix(ncol=8, nrow = 0), check.names = FALSE)
@@ -360,7 +362,7 @@ summarizing_and_subsetting_datasets <- function (x, y, classification_categories
   #Empty dataset for accumulated input dataset.
   full_input_dataset <- data.frame(matrix(ncol=ncol(input_dataset_numerical_values), nrow = 0), check.names = FALSE)
   colnames(full_input_dataset)<-colnames(input_dataset_numerical_values)
-
+  
   
   
   #SUBSETTING INPUT DATASETS
@@ -389,13 +391,13 @@ summarizing_and_subsetting_datasets <- function (x, y, classification_categories
       dataset_for_categorical_values_per_pollutant <-as.data.frame(filter(long_dataset_with_categorical_values_per_year, pollutant==pollutant_name))
       dataset_for_numerical_values_per_pollutant <-as.data.frame(filter(long_dataset_with_numerical_values_per_year, pollutant== pollutant_name))
       
-   
+      
       # Used to subset categorical and numerical datasets per tissue
       for(j in 1:length(tissues)){ 
         tissue_name <- tissues[j] 
         dataset_for_categorical_values_per_tissue<-as.data.frame(filter(dataset_for_categorical_values_per_pollutant, Tissue==tissue_name))
         dataset_for_numerical_values_per_tissue<-as.data.frame(filter(dataset_for_numerical_values_per_pollutant, Tissue==tissue_name)%>%mutate(outlier=NA))
-
+        
         
         #summarizing dataset based on the count of each classification category with the final column as the sum of the outlier for the detected values using dataset_for_numerical_values_per_tissue   
         summarized_categorical_values_1[1,1] <- year
@@ -405,7 +407,7 @@ summarizing_and_subsetting_datasets <- function (x, y, classification_categories
         summarized_categorical_values_1[1,5] <- sum(str_count(dataset_for_categorical_values_per_tissue$status,category1))
         summarized_categorical_values_1[1,6] <- sum(str_count(dataset_for_categorical_values_per_tissue$status,fixed(category2)))
         summarized_categorical_values_1[1,7] <- sum(str_count(dataset_for_categorical_values_per_tissue$status,category3))
-        # This if function would mainly accommodate datasets after being subsetted for tissue with at least one or no entries. for example; inksac in 2019.
+        # This "if function" is mainly used to accommodate datasets after being subsetted for tissue with at least one or no entries. for example; inksac in 2019.
         if(nrow(dataset_for_numerical_values_per_tissue)>1){
           summarized_categorical_values_1[1,8] <- outliercheck(x=dataset_for_numerical_values_per_tissue, y=input_dataset_numerical_values)[[1]]
           outlier_detection_dataset1 <- outliercheck(x=dataset_for_numerical_values_per_tissue, y=input_dataset_numerical_values)[[2]]
@@ -439,13 +441,13 @@ summarizing_and_subsetting_datasets <- function (x, y, classification_categories
         
       } #Tissue
       #Accumulating the outlier_detection_using_numerical_values dataset for a final dataset for all tissues
-     
+      
       full_dataset_for_outlier_detection_using_numerical_values <- rbind(full_dataset_for_outlier_detection_using_numerical_values, outlier_detection_using_numerical_values)
       
-     
+      
     }# pollutants
     summarized_categorical_values_full <- rbind(summarized_categorical_values_full,summarized_categorical_values_2_accumulated)
-   
+    
     summarized_categorical_values_yearly_total <- data.frame(matrix(ncol=8, nrow = 0), check.names = FALSE)
     colnames(summarized_categorical_values_yearly_total)<-c('year', 'pollutant', 'Tissue', 'Total_N',classification_categories, 'Outliers')
     
@@ -463,6 +465,7 @@ summarizing_and_subsetting_datasets <- function (x, y, classification_categories
     summarized_categorical_values_full <- rbind(summarized_categorical_values_full, summarized_categorical_values_yearly_total)
   } #years
   summarized_categorical_values_full1 <- summarized_categorical_values_full
+  #print(summarized_categorical_values_full%>%filter(year == 2021))
   #print(summarized_categorical_values_full1%>%filter(year == 2021))
   
   for(row in 1:nrow(summarized_categorical_values_full1)) {
@@ -471,208 +474,218 @@ summarizing_and_subsetting_datasets <- function (x, y, classification_categories
   status_levels<- status_levels
   final_dataset_categorical_values<- summarized_categorical_values_full1 %>% pivot_longer(all_of(status_levels), names_to = "status", values_to = "values")
   
-
-if(distribution_using == 'Tissues'){ 
-  final_dataset_for_plotting <- final_dataset_categorical_values %>%group_by(status, Tissue,pollutant, year) %>%mutate(Percentage = (values/Total_N)* 100) #correct (status, Tissue,pollutant, year)
-
-
-  }else if (distribution_using == 'Pollutants') {
-  final_dataset_for_plotting <- final_dataset_categorical_values %>%
+  
+  
+  final_dataset_for_plotting_by_tissue <- final_dataset_categorical_values %>%group_by(status, Tissue,pollutant, year) %>%mutate(Percentage = (values/Total_N)* 100) #correct (status, Tissue,pollutant, year)
+  
+  
+  final_dataset_for_plotting_by_pollutants <- final_dataset_categorical_values %>%
     filter(!(Tissue == "inksac" & year == 2019)) %>%  # Remove rows with inksacs and 2019
-    group_by(status, Tissue,pollutant, year) %>%
+    group_by(status,pollutant, year) %>%
     mutate(Percentage = (values / Total_N) * 100)
-  }else{
-    stop("Please enter either 'Tissues' or 'Pollutants' for 'distribution_using' to view data distribution")
-  }
+  # print("fdcv")
+  # print(final_dataset_categorical_values %>% filter(pollutant == 'Hg'& year == 2021))
+  # print('fdfp')
+  # print(final_dataset_for_plotting %>% filter(pollutant == 'Hg'& year == 2021))
+  # }else{
+  #   stop("Please enter either 'Tissues' or 'Pollutants' for 'distribution_using' to view data distribution")
+  # }
   
-  final_dataset_for_plotting[is.na(final_dataset_for_plotting)] = 0
+  final_dataset_for_plotting_by_tissue[is.na(final_dataset_for_plotting_by_tissue) | final_dataset_for_plotting_by_tissue < 0] = 0
   
-  # print('Below are the final results from summarizing_and_subsetting_datasets function')
-  # print('This dataset is called summarized_categorical_values_full')
-  # print(summarized_categorical_values_full)
-  # print('This dataset is called outlier_detection_using_numerical_value')
-  # print(outlier_detection_using_numerical_values)
-  # print('This dataset is called final_dataset_for_plotting')
-  # print(as.data.frame(final_dataset_for_plotting))
-
-  return(list (summarized_categorical_values_full=summarized_categorical_values_full, full_dataset_for_outlier_detection_using_numerical_values=full_dataset_for_outlier_detection_using_numerical_values,input_dataset_numerical_values=input_dataset_numerical_values, final_dataset_for_plotting=final_dataset_for_plotting))
+  final_dataset_for_plotting_by_pollutants[is.na(final_dataset_for_plotting_by_pollutants) | final_dataset_for_plotting_by_pollutants < 0] = 0
+  
+  #final_dataset_for_plotting[is.na(final_dataset_for_plotting)] = 0
+  
+  print('Below are the final results from summarizing_and_subsetting_datasets function')
+  print('This dataset is called summarized_categorical_values_full')
+  print(summarized_categorical_values_full)
+  print('This dataset is called outlier_detection_using_numerical_value')
+  print(outlier_detection_using_numerical_values)
+  print('This dataset is called final_dataset_for_plotting_by_tissues')
+  print(as.data.frame(final_dataset_for_plotting_by_tissue))
+  print('This dataset is called final_dataset_for_plotting_by_pollutants')
+  print(as.data.frame(final_dataset_for_plotting_by_pollutants))
+  
+  return(list (summarized_categorical_values_full=summarized_categorical_values_full, full_dataset_for_outlier_detection_using_numerical_values=full_dataset_for_outlier_detection_using_numerical_values,input_dataset_numerical_values=input_dataset_numerical_values, final_dataset_for_plotting_by_tissue=final_dataset_for_plotting_by_tissue, final_dataset_for_plotting_by_pollutants=final_dataset_for_plotting_by_pollutants))
 }
 
 
-#This function iterates through the outlier_detection_using_numerical_values dataset by row. If the outlier column says yes then it picks out the pollutant for that row to match it with the column name from the input_dataset_numerical_values. When it matches based on the same ID, Year and Tissues and if the user chooses keep the outliers in the dataset, they can do so or replace the outliers with 0 and return a new dataset.
+#This helper function iterates through the outlier_detection_using_numerical_values dataset by row. If the outlier column says yes then it picks out the pollutant for that row to match it with the column name from the input_dataset_numerical_values. When it matches based on the same ID, Year and Tissues and if the user chooses keep the outliers in the dataset, they can do so or replace the outliers with 0 and return a new dataset.
 #x=outlier_detection_using_numerical_values 
 #y=input_dataset_numerical_values
 final_dataset_numerical_values <- function(data_list, keep_outliers, column_range){
   
-#LOADING DATASETS FOR PROCESSING 
+  #LOADING DATASETS FOR PROCESSING 
   outlier_detection_using_numerical_values <-data_list$full_dataset_for_outlier_detection_using_numerical_values
   input_dataset_numerical_values <-data_list$input_dataset_numerical_values
-#FOR LOOP USED TO PROCESS FINAL DATASET
-for (value in 1:nrow(outlier_detection_using_numerical_values)){
-  if(outlier_detection_using_numerical_values[value,'outlier']=='yes'){
-    contaminant <- unique(outlier_detection_using_numerical_values[value,'pollutant'])
-    for(column_index in 1:length(column_range)){
-      if(colnames(input_dataset_numerical_values)[column_index+15]!= contaminant){
-        next
-      }else{
-        for (row in 1:nrow(input_dataset_numerical_values)){
-          if(outlier_detection_using_numerical_values[value,'ID']==input_dataset_numerical_values[row,'ID'] & outlier_detection_using_numerical_values[value,'Year']==input_dataset_numerical_values[row,'Year'] & outlier_detection_using_numerical_values[value,'Tissue']==input_dataset_numerical_values[row,'Tissue']){
-            if (keep_outliers == FALSE){
-              input_dataset_numerical_values[row,column_index+15] <- 0
+  #FOR LOOP USED TO PROCESS FINAL DATASET
+  for (value in 1:nrow(outlier_detection_using_numerical_values)){
+    if(outlier_detection_using_numerical_values[value,'outlier']=='yes'){
+      contaminant <- unique(outlier_detection_using_numerical_values[value,'pollutant'])
+      for(column_index in 1:length(column_range)){
+        if(colnames(input_dataset_numerical_values)[column_index+15]!= contaminant){
+          next
+        }else{
+          for (row in 1:nrow(input_dataset_numerical_values)){
+            if(outlier_detection_using_numerical_values[value,'ID']==input_dataset_numerical_values[row,'ID'] & outlier_detection_using_numerical_values[value,'Year']==input_dataset_numerical_values[row,'Year'] & outlier_detection_using_numerical_values[value,'Tissue']==input_dataset_numerical_values[row,'Tissue']){
+              if (keep_outliers == FALSE){
+                input_dataset_numerical_values[row,column_index+15] <- 0
+                final_dataset_for_numerical_values <- input_dataset_numerical_values
+                print('Im here')
+              }else{
+                input_dataset_numerical_values[row,column_index+15]<-input_dataset_numerical_values[row,column_index+15]
+                final_dataset_for_numerical_values <- input_dataset_numerical_values
+                
+              }
+              
               final_dataset_for_numerical_values <- input_dataset_numerical_values
-              print('Im here')
-            }else{
-              input_dataset_numerical_values[row,column_index+15]<-input_dataset_numerical_values[row,column_index+15]
-              final_dataset_for_numerical_values <- input_dataset_numerical_values
-      
+            }else{ #If the IDs, Year and Tissue are not equal to each other then it goes to the value in the input_dataset_numerical_values until the IDs, Year and Tissue match up with those from the outlier_detection_using_numerical_values
+              next
             }
-            
-            final_dataset_for_numerical_values <- input_dataset_numerical_values
-          }else{ #If the IDs, Year and Tissue are not equal to each other then it goes to the value in the input_dataset_numerical_values until the IDs, Year and Tissue match up with those from the outlier_detection_using_numerical_values
-            next
           }
         }
       }
+    }else{ #If outlier is not equal to 'yes' then it goes to the next value 
+      next
     }
-  }else{ #If outlier is not equal to 'yes' then it goes to the next value 
-    next
+    
   }
-
-}
-return(final_dataset_for_numerical_values)
+  return(final_dataset_for_numerical_values)
 }
 
 
-#This function plots the data distribution for visualization purposes.
-visualization <- function(data_list1, distribution_using){
+#This helper function plots the data distribution for visualization purposes.
+visualization <- function(data_list1){
   
   #LOADING DATASET FOR PLOTTING
-  final_dataset_for_plotting <- data_list1$final_dataset_for_plotting #saving the dataset_with_numerical_values as the input dataset for outliercheck and fiinal_dataset creation
-
+  final_dataset_for_plotting_by_tissue <- data_list1$final_dataset_for_plotting_by_tissue #Loading dataset for plotting distribution by tissues
+  
+  final_dataset_for_plotting_by_pollutants <- data_list1$final_dataset_for_plotting_by_pollutants #Loading dataset for plotting distribution by pollutants
   
   #Preparing empty lists to store results
   list0 <- list()
   list0names <- c()
   
-   #Used to create plots
-  if (grepl("Fe|Ag", final_dataset_for_plotting[1,'pollutant'])) {
-    if (distribution_using == 'Pollutants'){
+  #Used to create plots
+  if (grepl("Fe|Ag", final_dataset_for_plotting_by_pollutants[1,'pollutant'])) {
     status_levels<- c('BLOD','BB+BLOQ','Outliers','Detected')
     Colors <-setNames( c('#F8766D','#00A9FF','yellow','#00BA38'),status_levels)
     pollutant_levels <- c("Ag","Cd","Co","Cu","Fe","Hg","Ni","Pb","Tl","Zn", "Total")
-    plt <-ggplot(final_dataset_for_plotting, aes(x = factor(pollutant, levels = pollutant_levels), y = Percentage, fill= factor(status, levels = status_levels))) + geom_bar(stat="summary", width=0.97) + scale_fill_manual(values=Colors)+
+    
+    plot_pollutants <-ggplot(final_dataset_for_plotting_by_pollutants, aes(x = factor(pollutant, levels = pollutant_levels), y = Percentage, fill= factor(status, levels = status_levels))) + geom_bar(stat="summary", width=0.97) + scale_fill_manual(values=Colors)+
       coord_cartesian(expand = FALSE)+
       labs(title = paste('Data Distribution for Heavy Metals',sep =" "),
            y = "Classification % per Pollutant", x = "Pollutants", fill= 'Distribution Classifications')+
       #scale_fill_manual(values=Colors)+
       scale_y_continuous(labels = function(x) paste0(x, "%"))+
       facet_wrap(vars(year), scales ="free_x", ncol=3, drop = FALSE)+ theme(strip.text = element_text(size = 15, colour = 'black'), axis.text.x = element_text(size = 10, colour = 'black'))
-    print(plt)
-    list0<-append(list(plt),list0, 0)
+    print(plot_pollutants)
+    list0<-append(list(plot_pollutants),list0, 0)
     name0 <- paste("Data Distribution Barplots", sep = "")
     list0names <- append(list0names,name0)
-    }else{
-      status_levels<- c('BLOD','BB+BLOQ','Outliers','Detected')
-      Colors <-setNames( c('#F8766D','#00A9FF','yellow','#00BA38'),status_levels)
-      tissue_levels <- c("liver","stomach","muscle","inksac","Total")
-      plt <-ggplot(final_dataset_for_plotting, aes(x = factor(Tissue, levels = tissue_levels), y = Percentage, fill= factor(status, levels = status_levels))) + geom_bar(stat="summary", width=0.97) + scale_fill_manual(values=Colors)+
-        coord_cartesian(expand = FALSE)+
-        labs(title = paste('Data Distribution for Heavy Metals',sep =" "),
-             y = "Classification % per Tissue", x = "Tissues", fill= 'Distribution Classifications')+
-        #scale_fill_manual(values=Colors)+
-        scale_y_continuous(labels = function(x) paste0(x, "%"))+
-        facet_wrap(vars(year), scales ="free_x", ncol=3, drop = FALSE)+ theme(strip.text = element_text(size = 15, colour = 'black'), axis.text.x = element_text(size = 10, colour = 'black'))
-      print(plt)
-      list0<-append(list(plt),list0, 0)
-      name0 <- paste("Data Distribution Barplots", sep = "")
-      list0names <- append(list0names,name0)
-    }
-}else{
-  if (distribution_using == 'Pollutants'){
-  status_levels<- c('BLOD','BLOQ','Outliers','Detected')
-  Colors <-setNames( c('#F8766D','#00A9FF','yellow','#00BA38'),status_levels)
-  pollutant_levels <- c("Adipic_acid","Caprolactam","Chlorpyrifos","Ibuprofen","Total")
-  plt <-ggplot(final_dataset_for_plotting, aes(x = factor(pollutant, levels = pollutant_levels), y = Percentage, fill= factor(status, levels = status_levels))) + geom_bar(stat="summary", width=0.97) + scale_fill_manual(values=Colors)+
-    coord_cartesian(expand = FALSE)+
-    labs(title = paste('Data Distribution for Organic Compounds',sep =" "),
-         y = "Classification % per Pollutants", x = "Pollutants", fill= 'Distribution Classifications')+
-    #scale_fill_manual(values=Colors)+
-    scale_y_continuous(labels = function(x) paste0(x, "%"))+
-    facet_wrap(vars(year), scales ="free_x", ncol=3, drop = FALSE)+ theme(strip.text = element_text(size = 15, colour = 'black'), axis.text.x = element_text(size = 10, colour = 'black'))
-  print(plt)
-  list0<-append(list(plt),list0, 0)
-  name0 <- paste("Data Distribution Barplots", sep = "")
-  list0names <- append(list0names,name0)
+    
+    status_levels<- c('BLOD','BB+BLOQ','Outliers','Detected')
+    Colors <-setNames( c('#F8766D','#00A9FF','yellow','#00BA38'),status_levels)
+    tissue_levels <- c("liver","stomach","muscle","inksac","Total")
+    plot_tissues <-ggplot(final_dataset_for_plotting_by_tissue, aes(x = factor(Tissue, levels = tissue_levels), y = Percentage, fill= factor(status, levels = status_levels))) + geom_bar(stat="summary", width=0.97) + scale_fill_manual(values=Colors)+
+      coord_cartesian(expand = FALSE)+
+      labs(title = paste('Data Distribution for Heavy Metals',sep =" "),
+           y = "Classification % per Tissue", x = "Tissues", fill= 'Distribution Classifications')+
+      #scale_fill_manual(values=Colors)+
+      scale_y_continuous(labels = function(x) paste0(x, "%"))+
+      facet_wrap(vars(year), scales ="free_x", ncol=3, drop = FALSE)+ theme(strip.text = element_text(size = 15, colour = 'black'), axis.text.x = element_text(size = 10, colour = 'black'))
+    print(plot_tissues)
+    list0<-append(list(plot_tissues),list0, 0)
+    name0 <- paste("Data Distribution Barplots", sep = "")
+    list0names <- append(list0names,name0)
   }else{
     status_levels<- c('BLOD','BLOQ','Outliers','Detected')
     Colors <-setNames( c('#F8766D','#00A9FF','yellow','#00BA38'),status_levels)
+    pollutant_levels <- c("Adipic_acid","Caprolactam","Chlorpyrifos","Ibuprofen","Total")
+    
+    plot_pollutants <-ggplot(final_dataset_for_plotting_by_pollutants, aes(x = factor(pollutant, levels = pollutant_levels), y = Percentage, fill= factor(status, levels = status_levels))) + geom_bar(stat="summary", width=0.97) + scale_fill_manual(values=Colors)+
+      coord_cartesian(expand = FALSE)+
+      labs(title = paste('Data Distribution for Organic Compounds',sep =" "),
+           y = "Classification % per Pollutant", x = "Pollutants", fill= 'Distribution Classifications')+
+      #scale_fill_manual(values=Colors)+
+      scale_y_continuous(labels = function(x) paste0(x, "%"))+
+      facet_wrap(vars(year), scales ="free_x", ncol=3, drop = FALSE)+ theme(strip.text = element_text(size = 15, colour = 'black'), axis.text.x = element_text(size = 10, colour = 'black'))
+    print(plot_pollutants)
+    list0<-append(list(plot_pollutants),list0, 0)
+    name0 <- paste("Data Distribution using pollutants", sep = "")
+    list0names <- append(list0names,name0)
+    
+    status_levels<- c('BLOD','BLOQ','Outliers','Detected')
+    Colors <-setNames( c('#F8766D','#00A9FF','yellow','#00BA38'),status_levels)
     tissue_levels <- c("liver","stomach","muscle","inksac","Total")
-    plt <-ggplot(final_dataset_for_plotting, aes(x = factor(Tissue, levels = tissue_levels), y = Percentage, fill= factor(status, levels = status_levels))) + geom_bar(stat="summary", width=0.97) + scale_fill_manual(values=Colors)+
+    plot_tissues <-ggplot(final_dataset_for_plotting_by_tissue, aes(x = factor(Tissue, levels = tissue_levels), y = Percentage, fill= factor(status, levels = status_levels))) + geom_bar(stat="summary", width=0.97) + scale_fill_manual(values=Colors)+
       coord_cartesian(expand = FALSE)+
       labs(title = paste('Data Distribution for Organic Compounds',sep =" "),
            y = "Classification % per Tissue", x = "Tissues", fill= 'Distribution Classifications')+
       #scale_fill_manual(values=Colors)+
       scale_y_continuous(labels = function(x) paste0(x, "%"))+
       facet_wrap(vars(year), scales ="free_x", ncol=3, drop = FALSE)+ theme(strip.text = element_text(size = 15, colour = 'black'), axis.text.x = element_text(size = 10, colour = 'black'))
-    print(plt)
-    list0<-append(list(plt),list0, 0)
-    name0 <- paste("Data Distribution Barplots", sep = "")
+    print(plot_tissues)
+    list0<-append(list(plot_tissues),list0, 0)
+    name0 <- paste("Data Distribution using tissues", sep = "")
     list0names <- append(list0names,name0)
-}
   }  
-  return(plot=list0)
+  
+  names(list0) <- list0names
+  return(data_distribution_plots=list0)
 }
 
 
-#This Function incorporates all the previous functions to help  process the data and create the tables and graphs needed to visualize and interpret the data distribution. The keep_outliers argument is for the final updated dataset. If it is 'TRUE' then it replaces the outliers with 0 in the updated final dataset. If 'FALSE' then it keeps the outliers. 
-data_distribution <- function(data_list, keep_outliers, distribution_using){
+#This main Function incorporates all the previous functions to help  process the data and create the tables and graphs needed to visualize and interpret the data distribution. The keep_outliers argument is for the final updated dataset. If it is 'FALSE' then it replaces the outliers with 0 in the updated final dataset. If 'TRUE' then it keeps the outliers. 
+data_distribution <- function(data_list, keep_outliers){
   
   dataset_with_categorical_values <- data_list$dataset_with_categorical_values
   dataset_with_numerical_values <- data_list$dataset_with_numerical_values
-
+  
   keep_outliers
   
   x <- data_list$dataset_with_categorical_values
   
-   if (grepl("Fe|Ag", colnames(x)[16])) {
-     
-     column_range <- 16:25
-     
-     classification_categories <- c('BLOD',"BB+BLOQ",'Detected')
-     
-     status_levels <- c('BLOD',"BB+BLOQ", 'Outliers', 'Detected')
-     
-     data_list1 <- summarizing_and_subsetting_datasets(dataset_with_numerical_values, dataset_with_categorical_values, classification_categories, status_levels, column_range, distribution_using)
-     
-     new_dataset <- final_dataset_numerical_values(data_list1, keep_outliers, column_range)
-     
-     print(new_dataset)
-     
-     graph <- visualization (data_list1, distribution_using)
-     
-   }else{
-     
-     column_range <- 16:19
+  if (grepl("Fe|Ag", colnames(x)[16])) {
     
-     classification_categories <- c('BLOD',"BLOQ",'Detected')
-     
-     status_levels <- c('BLOD',"BLOQ", 'Outliers', 'Detected')
-     
-      #Loading datasets from lists to be subsetted later for data distribution processing
-     dataset_with_categorical_values <- data_list$dataset_with_categorical_values
-     dataset_with_numerical_values <- data_list$dataset_with_numerical_values
-     
-     data_list1 <- summarizing_and_subsetting_datasets(x=dataset_with_numerical_values, y=dataset_with_categorical_values, classification_categories, status_levels, column_range, distribution_using)
-     
-     new_dataset <- final_dataset_numerical_values(data_list1, keep_outliers, column_range)
-  
-     graph <- visualization (data_list1, distribution_using)
-     
-   }
+    column_range <- 16:25
+    
+    classification_categories <- c('BLOD',"BB+BLOQ",'Detected')
+    
+    status_levels <- c('BLOD',"BB+BLOQ", 'Outliers', 'Detected')
+    
+    data_list1 <- summarizing_and_subsetting_datasets(dataset_with_numerical_values, dataset_with_categorical_values, classification_categories, status_levels, column_range)
+    
+    new_dataset <- final_dataset_numerical_values(data_list1, keep_outliers, column_range)
+    
+    print(new_dataset)
+    
+    graph <- visualization (data_list1)
+    
+  }else{
+    
+    column_range <- 16:19
+    
+    classification_categories <- c('BLOD',"BLOQ",'Detected')
+    
+    status_levels <- c('BLOD',"BLOQ", 'Outliers', 'Detected')
+    
+    #Loading datasets from lists to be subsetted later for data distribution processing
+    dataset_with_categorical_values <- data_list$dataset_with_categorical_values
+    dataset_with_numerical_values <- data_list$dataset_with_numerical_values
+    
+    data_list1 <- summarizing_and_subsetting_datasets(x=dataset_with_numerical_values, y=dataset_with_categorical_values, classification_categories, status_levels, column_range)
+    
+    new_dataset <- final_dataset_numerical_values(data_list1, keep_outliers, column_range)
+    
+    graph <- visualization (data_list1)
+    
+  }
   return(list (summarized_and_subsetted_datasets=data_list1, #summarized and subsetted the datasets finding the outliers and counting the classification categories for each pollutant in each year and for each tissue.  
                updated_dataset_of_numerical_values=new_dataset, #if outliers are chosen to be removed then all the outliers in the updated dataset will be zero
-                data_distribiution_graph=graph))
+               data_distribution_graph=graph))
 }
 
-final_list <- data_distribution(datasets_for_heavy_metals_data_distribution, keep_outliers=TRUE, distribution_using = 'Tissues')
+final_list <- data_distribution(datasets_for_organic_compounds_data_distribution, keep_outliers=TRUE)
 

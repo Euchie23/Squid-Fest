@@ -155,7 +155,7 @@ sample_id_bi_and_dtl_dataset <-function(x){ #padding 0 to ID_NUMBER COLUMN
 
 # STEP 2: ACTIVATING MAIN FUNCTION TO BE USED IN CONCENTRATION DATASET MANIPULATION---- 
 #In this process the concentrations for the squid samples are calculated  with the help of the previous functions in STEP 1 and also the corresponding dry weight, squid catch data and distance to land datasets
-preprocessed_organic_compounds_concentration_dataset <- function(files, path, dry_weight, squid_info, distance_to_land){
+preprocessed_organic_compounds_concentration_dataset <- function(files, path, dry_weight, squid_info, distance_to_land, col_names){
 
 # loading datasets  
 files <- files
@@ -344,7 +344,9 @@ while(h!= nrow(x)+1){
 
 
 #REARRANGING COLUMNS FOR FINAL DATASET
-x=x[,c(1:6, 11:19, 7:10)]
+x=x[,c(1:6,13, 11:12,14:19, 7:10)]
+print('This is x')
+print(x)
 colnames(x)[c(1,3)] <- c("ID", "DW")
 
    # #EXPORTING EXTRACTION RESULTS FILE INTO CSV/EXCEL
@@ -354,7 +356,7 @@ colnames(x)[c(1,3)] <- c("ID", "DW")
    Final_res_OC = "Datasets/Results/Final_OCresults_mgkg.csv"
    write.table(x, file = Final_res_OC, sep = ",",#change the rows index
                append = TRUE, quote = FALSE,
-               col.names = TRUE, row.names = FALSE)
+               col.names = col_names, row.names = FALSE)
 
    return(x)
    
@@ -398,5 +400,5 @@ squid_info <- read.csv("Datasets/Squid Catch Data/2021_catch_data.csv", header= 
 
 
 #STEP 5: RUNNING MAIN FUNCTION WITH REQUIRED DATASETS----
-organic_compound_concentration_dataset <- preprocessed_organic_compounds_concentration_dataset(files, path, dry_weight, squid_info, distance_to_land)  
+organic_compound_concentration_dataset <- preprocessed_organic_compounds_concentration_dataset(files, path, dry_weight, squid_info, distance_to_land, col_names = FALSE)  
    
