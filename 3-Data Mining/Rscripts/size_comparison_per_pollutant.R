@@ -3,13 +3,13 @@ library(ggplot2)  # For plotting graphs
 library(dplyr) # for data manipulation
 library(tidyr) # For a collection of R packages used for data manipulation and visualization.
 library(stringr) # For String Manipulation
-library(tibble)
+library(tibble) # For creating tibbles
 
 
 
 #Data Processor Function before doing analysis
-#IT is recommended that the 'Keep_LOQ_values' argument remain as FALSE to remove all values below blank control (BB) or LOQ (BLOQ) to get a more accurate figure for the number of outliers within the dataset for the data distribution otherwise it will also classify values that are BB or BLOQ  as outliers leading to couble counting.
-process_dataset_for_data_distribution <- function(data, keep_LOQ_values=FALSE) {
+#It is recommended that the 'Keep_LOQ_values' argument remain as FALSE to remove all values below blank control (BB) or LOQ (BLOQ) to get a more accurate figure for the number of outliers within the dataset for the data distribution otherwise it will also classify values that are BB or BLOQ  as outliers leading to double counting.
+process_dataset<- function(data, keep_LOQ_values=FALSE) {
   # Check if the dataset is Heavy Metals (Ag is in the 16th column)
   if (grepl("Fe|Ag", colnames(data)[16])) {
     
@@ -45,11 +45,23 @@ process_dataset_for_data_distribution <- function(data, keep_LOQ_values=FALSE) {
       data1[,c(16:25)] <- lapply(data1[,c(16:25)], gsub, pattern = "^0$", replacement = 0)
       data1[,c(16:25)]  <- lapply(data1[,c(16:25)] , gsub, pattern = "N/A", replacement = 0)
       
+      
       data2[,c(16:25)] <- lapply(data2[,c(16:25)], gsub, pattern = ".*BLOQ.*", replacement = 'BB+BLOQ')
       data2[,c(16:25)] <- lapply(data2[,c(16:25)], gsub, pattern = ".*BB.*", replacement = 'BB+BLOQ')
       data2[,c(16:25)] <- lapply(data2[,c(16:25)], gsub, pattern = "^0$", replacement = 'BLOD')
       data2[,c(16:25)]  <- lapply(data2[,c(16:25)] , gsub, pattern = "N/A", replacement = 'BLOD')
       data2[,c(16:25)] <- lapply(data2[,c(16:25)], gsub, pattern = "[0-9.]+", replacement = "Detected")
+      
+      # Get the column names for columns 17 to 25
+      cols_to_reorder <- names(data1)[16:25]
+      
+      # Sort the column names alphabetically
+      sorted_cols <- sort(cols_to_reorder)
+      
+      # Reorder the columns based on the sorted names
+      data1 <- data1[, c(1:15, match(sorted_cols, names(data1)))]
+      data2 <- data2[, c(1:15, match(sorted_cols, names(data2)))]
+      
       return(list(dataset_with_numerical_values=data1, dataset_with_categorical_values=data2))
       
     }else{
@@ -117,10 +129,22 @@ process_dataset_for_data_distribution <- function(data, keep_LOQ_values=FALSE) {
           return(cleaned_column)
         })
         
+        # Get the column names for columns 17 to 25
+        cols_to_reorder <- names(data1)[16:25]
+        
+        # Sort the column names alphabetically
+        sorted_cols <- sort(cols_to_reorder)
+        
+        # Reorder the columns based on the sorted names
+        data1 <- data1[, c(1:15, match(sorted_cols, names(data1)))]
+        data2 <- data2[, c(1:15, match(sorted_cols, names(data2)))]
+        
         # Return the updated dataset
         return(list(dataset_with_numerical_values=data1, dataset_with_categorical_values=data2))
       }
+      
       data1 <-process_data(data, user_choice)
+      
       #return(list(dataset_with_numerical_values=data1, dataset_with_categorical_values=data2))
     }
     
@@ -233,6 +257,7 @@ process_dataset_for_data_distribution <- function(data, keep_LOQ_values=FALSE) {
         #return(list(dataset_with_numerical_values=data1, dataset_with_categorical_values=data2))
       }
       data1 <-process_data(data, user_choice)
+      print(data1)
       return(list(dataset_with_numerical_values=data1, dataset_with_categorical_values=data2))
     }
   }
@@ -241,42 +266,126 @@ process_dataset_for_data_distribution <- function(data, keep_LOQ_values=FALSE) {
 
 # Data Processing for Heavy Metals dataset
 heavymetals_data <- read.csv("Datasets/Results/Final_HMresults_mgkg.csv", header = TRUE)
-datasets_for_heavy_metals_data_distribution <- process_dataset_for_data_distribution(heavymetals_data, keep_LOQ_values = FALSE) 
+datasets_for_heavy_metals <- process_dataset(heavymetals_data, keep_LOQ_values = FALSE) 
 
 
 # Data Processing for Organic Compounds dataset
 organiccompounds_data <- read.csv("Datasets/Results/Final_OCresults_mgkg.csv", header = TRUE)
-datasets_for_organic_compounds_data_distribution <- process_dataset_for_data_distribution(organiccompounds_data, keep_LOQ_values = FALSE)
+datasets_for_organic_compounds <- process_dataset(organiccompounds_data, keep_LOQ_values = FALSE)
+
+
+#generating the markdown for reading images:
+#OCicons for Organic Compounds
+OCiconz <- data.frame(pollutants=c("Adipic_acid","Caprolactam","Chlorpyrifos","Ibuprofen"), icons=c("https://img.icons8.com/?size=38&id=ZbNOoXleVpQN&format=png","https://img.icons8.com/?size=38&id=ZbNOoXleVpQN&format=png","https://img.icons8.com/?size=38&id=15168&format=png","https://img.icons8.com/?size=38&id=15168&format=png"))
+urls <-OCiconz$icons
+names(urls) <- OCiconz$pollutants
+
+#HMicons for Heavy Metals:
+HMiconz <- data.frame(pollutants=c("Ag","Cd","Co","Cu","Fe","Hg","Ni","Pb","Tl","Zn"), icons=c("https://img.icons8.com/?size=160&id=8FW995comxyx&format=png","https://img.icons8.com/?size=160&id=8FW995comxyx&format=png","https://img.icons8.com/?size=160&id=8FW995comxyx&format=png","https://img.icons8.com/?size=160&id=8FW995comxyx&format=png","https://img.icons8.com/?size=160&id=8FW995comxyx&format=png","https://img.icons8.com/?size=160&id=8FW995comxyx&format=png","https://img.icons8.com/?size=160&id=8FW995comxyx&format=png","https://img.icons8.com/?size=38&id=ZbNOoXleVpQN&format=png","https://img.icons8.com/?size=38&id=ZbNOoXleVpQN&format=png","https://img.icons8.com/?size=160&id=8FW995comxyx&format=png"))
+urlz <-HMiconz$icons
+names(urlz) <- HMiconz$pollutants
+
+
+#Helper function for prepping markdown for ggplot. This is used to turn the url text into an image.
+theme_icons <- function(base_size = 10,
+                        title_size = 20,
+                        ...){
+  # CUSTOM THEME:
+  ggplot2::theme_minimal(base_size = base_size) +
+    ggplot2::theme(
+      
+      # axis
+      axis.text = element_text( size = 10 ),
+      axis.text.x = element_text( size = 10),
+      axis.title = element_text( size = 16, face = "bold" ),
+      
+      # title
+      plot.title = element_text(size = title_size),
+      plot.title.position = "plot",
+      
+      #panel
+      panel.background = element_rect(fill="white"),
+      panel.ontop = FALSE,
+      #legend
+      legend.text = element_text(size = 15),
+      legend.title = element_text(face = "bold", size = 16),
+      
+      #strip
+      strip.text = element_text(size = 10),
+      strip.background =element_rect(fill="lightgray"),
+      strip.text.x = element_markdown(size = 20),
+      ... 
+    )
+}
+
+
+#Helper function to activate the icons for organic compound pollutants in final graph,  It first checks if the icons exist and if they do then they are posted in the graph: 
+markdown_function_for_OC_icons <- function(x) {
+  # Use file.path() for a safe file path
+  icon_path <- file.path("OCicons", paste0(x[1], ".png"))
+  
+  # Construct the HTML string
+  y <- paste0(" <img src='", icon_path, "' width='17'/>")
+  
+  return(y)
+}
+
+
+
+#Helper function to activate the icons for heavy metal pollutants in final graph, It first checks if the icons exist and if they do then they are loaded unto the graph: 
+markdown_function_for_HM_icons <- function(x) {
+  # Create file paths correctly
+  file1 <- file.path("HMicons", paste0(x[1], ".png"))
+  file2 <- file.path("HMicons", paste0(x[1], "1.png"))
+  file3 <- file.path("HMicons", paste0(x[1], "2.png"))
+  
+  # Check which files exist and build the HTML string accordingly
+  if (file.exists(file1) & file.exists(file2) & file.exists(file3)) {
+    y <- paste0(" ", "<img src='", file1, "' width='17'/> ",
+                "<img src='", file2, "' width='17'/> ",
+                "<img src='", file3, "' width='17'/>")
+  } else if (file.exists(file1) & file.exists(file2)) {
+    y <- paste0(" ", "<img src='", file1, "' width='17'/> ",
+                "<img src='", file2, "' width='17'/>")
+  } else {
+    y <- paste0(" ", "<img src='", file1, "' width='17'/>")
+  }
+  
+  return(y)
+} 
+
 
 
 # Helper function to adjust the variable based on the year and other factors
 adjust_variable <- function(subset_by_year, size, year) {
   if (unique(subset_by_year$vars) == 'dtfl_km' & unique(subset_by_year$Year) == '2019') {
-    return(max(subset_by_year$values) * 0.75)
+    return(max(subset_by_year$Values) * 0.75)
   } else if (unique(subset_by_year$vars) == 'dtfl_km' & unique(subset_by_year$Year) == '2020') {
-    return(max(subset_by_year$values) * 0.85)
+    return(max(subset_by_year$Values) * 0.85)
   } else if (unique(subset_by_year$vars) == 'dtfl_km' & unique(subset_by_year$Year) == '2021') {
-    return(max(subset_by_year$values) * 0.5)
+    return(max(subset_by_year$Values) * 0.5)
   } else if (unique(subset_by_year$vars) == 'dta_km' & unique(subset_by_year$Year) == '2019') {
-    return(min(subset_by_year$values))
+    return(min(subset_by_year$Values))
   } else if (unique(subset_by_year$vars) == 'dta_km' & unique(subset_by_year$Year) == '2020') {
-    return(min(subset_by_year$values))
+    return(min(subset_by_year$Values))
   } else if (unique(subset_by_year$vars) == 'dta_km' & unique(subset_by_year$Year) == '2021') {
-    return(min(subset_by_year$values))
+    return(min(subset_by_year$Values))
   } else {
-    return(max(as.numeric(as.factor(subset_by_year$values))) * 0.5)
+    return(max(as.numeric(as.factor(subset_by_year$Values))) * 0.2)
   }
 }
 
-# Helper function to calculate and store coefficients for different tissue sizes, filtering out outliers and using minimun outlier concentration to set upper limit for y axis.
-get_coefficients <- function (dataset_subsetted_by_tissue, quantile_level_for_outliers, axis_modification = axis_modification_multiplier ){
+
+
+# Helper function to calculate and store coefficients after performing spearmans correlation to assess the strength and direction of the monotonic relationship between sizes and concentrations. It also filters out outliers and uses the minimun outlier concentration to set upper limit for y axis.
+get_coefficients <- function (dataset_subsetted_by_tissue, axis_modification = axis_modification_multiplier){
   
   # Extracting unique factor levels for sizes, tissues, and years
   sizes <- levels(factor(dataset_subsetted_by_tissue$size)) # Size categories
   tissues <- levels(factor(dataset_subsetted_by_tissue$Tissue)) # Tissue categories
   years <- levels(factor(dataset_subsetted_by_tissue$Year)) # Year categories
   
- 
+  
   # Initialize variable to control loop iteration based on tissue type
   s<-1
   if(unique(dataset_subsetted_by_tissue$Tissue)=='inksac'){
@@ -284,23 +393,23 @@ get_coefficients <- function (dataset_subsetted_by_tissue, quantile_level_for_ou
   }else{
     index <- 4 # Otherwise, loop runs for 4 iterations
   }
-  # Create an empty data frame to store the results of the coefficients. final coefficient_dataframe_final where coefficient1 is accumulated
-  coefficient_dataframe_final <- data.frame(matrix(ncol=8, nrow = 0))
-  colnames(coefficient_dataframe_final) <- c('Tissue','Year','concentrations', 'variable','rho', 'pvalues', 'y_axis_upper_limit', 'size')
+  # Create an empty data frame to store the results of the coefficients. final coefficient_results_final where coefficient_results_1 is accumulated
+  coefficient_results_final <- data.frame(matrix(ncol=9, nrow = 0))
+  colnames(coefficient_results_final) <- c('Tissue', 'Year','pollutant','concentrations', 'Values','rho', 'pvalues', 'y_axis_upper_limit', 'size')
   
   # Loop through the years and calculate coefficients
   while(s != index) {
     
     # Temporary data frame to store coefficients for the current iteration
-    coefficient1 <- data.frame(matrix(ncol=8, nrow = 0))
-    colnames(coefficient1) <- colnames(coefficient_dataframe_final)
+    coefficient_results_1 <- data.frame(matrix(ncol=9, nrow = 0))
+    colnames(coefficient_results_1) <- colnames(coefficient_results_final)
     
     # Create an empty data frame for storing results for the current year and size
-    coefficient_dataframe1 <- data.frame(matrix(ncol=8, nrow = 0)) 
-    colnames(coefficient_dataframe1) <- colnames(coefficient_dataframe_final)
+    coefficient_dataframe_final <- data.frame(matrix(ncol=9, nrow = 0)) 
+    colnames(coefficient_dataframe_final) <- colnames(coefficient_results_final)
     
     # Identify outliers: concentrations above the 90th percentile
-    outlier  <-which(dataset_subsetted_by_tissue$concentrations > quantile(dataset_subsetted_by_tissue$concentrations, quantile_level_for_outliers))  # Find concentrations greater than the 'quantile_level_for_outliers' inserted when running the parent function.
+    outlier  <-which(dataset_subsetted_by_tissue$concentrations > quantile(dataset_subsetted_by_tissue$concentrations, 0.95))  # Find concentrations greater than the 'quantile_level_for_outliers' inserted when running the parent function.
     outliers <- dataset_subsetted_by_tissue$concentrations[c(outlier)] # Extract the outlier concentrations
     
     # If there are outliers, remove them and calculate the upper limit for the y-axis
@@ -322,62 +431,72 @@ get_coefficients <- function (dataset_subsetted_by_tissue, quantile_level_for_ou
         
         # If there are not enough data points or all concentrations are the same, set default values
         if(nrow(size_dataframe)<2|all(size_dataframe[-1,'concentrations'] == size_dataframe[1,'concentrations']|max(size_dataframe$concentrations)== 0)==TRUE){ 
-    
-          # Set default values if data is insufficient or all concentrations are the same
-          coefficient1[1,1] <- unique(subset_by_year$Tissue)
-          coefficient1[1,2] <- years[s]
-          coefficient1[1,3] <- 0 # Set concentration to 0
-          coefficient1[1,4] <- 0 # Set variable to 0
-          coefficient1[1,5] <- 0 # Set rho to 0
-          coefficient1[1,6] <- 0 # Set p-value to 0
-          coefficient1[1,7] <- ifelse(max(size_dataframe$concentrations)|length(size_dataframe$concentrations) == 0, 0, max(size_dataframe$concentrations)) # Max concentration for y-axis
-          coefficient1[1,8] <- sizes[i]
           
-          coefficient_dataframe1 <- rbind(coefficient_dataframe1, coefficient1) # Append the current coefficient to the results
-      
-        # If the maximum concentration in the size dataframe is not 0 then go to perform the correlation test for large sized squids.
+          # Set default values if data is insufficient or all concentrations are the same
+          coefficient_results_1[1,1] <- unique(subset_by_year$Tissue)
+          coefficient_results_1[1,2] <- years[s]
+          coefficient_results_1[1,3] <- unique(subset_by_year$pollutants)
+          coefficient_results_1[1,4] <- 0 # Set variable to 0
+          coefficient_results_1[1,5] <- 0 # Set rho to 0
+          coefficient_results_1[1,6] <- 0 # Set p-value to 0
+          coefficient_results_1[1,7] <- 0
+          coefficient_results_1[1,8] <- ifelse(max(size_dataframe$concentrations)|length(size_dataframe$concentrations) == 0, 0, max(size_dataframe$concentrations)) # Max concentration for y-axis
+          coefficient_results_1[1,9] <- sizes[i]
+          
+          coefficient_dataframe_final <- rbind(coefficient_dataframe_final, coefficient_results_1) # Append the current coefficient to the results
+          
+          # If the maximum concentration in the size dataframe is not 0 then go to perform the correlation test for large sized squids.
         }else{
-
+          
           # Perform correlation test for different size categories (small, medium, large)
-          coefficient0 <- cor.test(as.numeric(as.factor(size_dataframe$values)), as.numeric(size_dataframe$concentrations), method = "spearman", exact = FALSE)
+          coefficient_results <- cor.test(as.numeric(as.factor(size_dataframe$Values)), as.numeric(size_dataframe$concentrations), method = "spearman", exact = FALSE)
           
           # Store the results for correlation coefficient and p-value
-          coefficient1[1, 1] <- unique(size_dataframe$Tissue)
-          coefficient1[1, 2] <- years[s]
-          coefficient1[1, 3] <- signif((y_upper_limit * 0.95), 3)  #X-coordinate for rho coefficient and p-value
+          coefficient_results_1[1, 1] <- unique(size_dataframe$Tissue)
+          coefficient_results_1[1, 2] <- years[s]
+          coefficient_results_1[1, 3] <- unique(size_dataframe$pollutants)
+          if (str_detect(sizes[i], "large")== TRUE){
+            coefficient_results_1[1, 4] <- signif((y_upper_limit * 0.95), 3)  #X-coordinate for rho coefficient and p-value
+          }else if (str_detect(sizes[i], "medium")== TRUE){
+            coefficient_results_1[1, 4] <- signif((y_upper_limit * 0.85), 3)
+          }else{
+            coefficient_results_1[1, 4] <- signif((y_upper_limit * 0.75), 3) 
+          }
           
           
           # Adjust the variable depending on the year and the variable type
-          coefficient1[1, 4] <- adjust_variable(subset_by_year, sizes[i], years[s])
+          coefficient_results_1[1, 5] <- adjust_variable(subset_by_year, sizes[i], years[s])
           
           # Store the rho and p-values from the correlation test
-          coefficient1[1, 5] <- coefficient0$estimate
-          coefficient1[1, 6] <- coefficient0$p.value
-          coefficient1[1, 7] <- y_upper_limit  # Store the calculated yscale
-          coefficient1[1, 8] <- unique(size_dataframe$size)
+          coefficient_results_1[1, 6] <- coefficient_results$estimate
+          coefficient_results_1[1, 7] <- coefficient_results$p.value
+          coefficient_results_1[1, 8] <- y_upper_limit  # Store the calculated yscale
+          coefficient_results_1[1, 9] <- unique(size_dataframe$size)
           # Append the calculated coefficients to the results
-          coefficient_dataframe1 <- rbind(coefficient_dataframe1, coefficient1)
+          coefficient_dataframe_final <- rbind(coefficient_dataframe_final, coefficient_results_1)
         }
       }
     }       
-          
+    
     # Increment the year index
     s<-s+1
     
- 
+    
     # Append the results from the current year to the final dataframe
-    coefficient_dataframe_final <- rbind(coefficient_dataframe_final, coefficient_dataframe1)
-    coefficient_dataframe_final$Tissue <- as.character(coefficient_dataframe_final$Tissue)  # Convert Tissue column to character type
-    coefficient_dataframe_final$Year <- as.character(coefficient_dataframe_final$Year) # Convert Year column to character type
-   
+    coefficient_results_final <- rbind(coefficient_results_final, coefficient_dataframe_final)
+    coefficient_results_final$Tissue <- as.character(coefficient_results_final$Tissue)  # Convert Tissue column to character type
+    coefficient_results_final$Year <- as.character(coefficient_results_final$Year) # Convert Year column to character type
+    
   }
   # Return the final dataframe with the coefficients
-  return (coefficient_dataframe_final)
+  return (coefficient_results_final)
 }
 
-# Helper function to modify the coefficients by cleaning and formatting rho and p-values
-coefficient_results_modification <- function(coefficients_accumulated) {
 
+
+# Helper function to modify the coefficients by cleaning and formatting rho and p-values.
+coefficient_results_modification <- function(coefficients_accumulated) {
+  
   # Round 'rho' values to 4 decimal places
   coefficients_accumulated$rho <- signif(coefficients_accumulated$rho, 4)
   
@@ -385,8 +504,8 @@ coefficient_results_modification <- function(coefficients_accumulated) {
   coefficients_accumulated$pvalues <- signif(coefficients_accumulated$pvalues)
   
   # Replace rho and pvalues with NA for non-significant results (p-values > 0.05 or p-value == 0)
-  coefficients_accumulated$rho[coefficients_accumulated$pvalues > 0.05 | coefficients_accumulated$pvalues == 0] <- NA
-  coefficients_accumulated$pvalues[coefficients_accumulated$pvalues > 0.05 | coefficients_accumulated$pvalues == 0] <- NA
+  coefficients_accumulated$rho[coefficients_accumulated$pvalues > 0.05 | coefficients_accumulated$pvalues == 0| is.nan(coefficients_accumulated$pvalues)] <- NA
+  coefficients_accumulated$pvalues[coefficients_accumulated$pvalues > 0.05 | coefficients_accumulated$pvalues == 0|is.nan(coefficients_accumulated$pvalues)] <- NA
   
   # Add labels "r=" and "p-val=" to 'rho' and 'pvalues'
   coefficients_accumulated$rho <- paste0("r=", coefficients_accumulated$rho)
@@ -402,6 +521,7 @@ coefficient_results_modification <- function(coefficients_accumulated) {
   
   # Replace NA or NaN with 0 for 'rho' and 'pvalues'
   coefficients_accumulated$rho[is.na(coefficients_accumulated$rho)] <- 0
+  coefficients_accumulated$rho[is.nan(coefficients_accumulated$rho)] <- 0
   coefficients_accumulated$pvalues[is.na(coefficients_accumulated$pvalues)] <- 0
   coefficients_accumulated$pvalues[is.nan(coefficients_accumulated$pvalues)] <- 0
   
@@ -412,10 +532,11 @@ coefficient_results_modification <- function(coefficients_accumulated) {
   return(modified_coefficients)
 }
 
-# MAain function: data_mining_using_mantle_length_for_concentrations
-# This function performs a series of data processing steps, including statistical analysis, and plotting, to investigate the relationship between various environmental concentrations and biological variables (such as tissue types and year). The analysis uses mantle length as a categorical variable to group data into small, medium, and large categories, which are then used to generate plots of pollutant concentrations versus different variables (e.g.,distance traveled or size). The function includes options for handling outliers, zero values, and performing statistical modeling (e.g., linear regression) to assess the strength of these relationships. Plots are generated using `ggplot2`, and results are returned in a list.
 
-data_mining_using_mantle_length_for_concentrations_collectively <- function (data_list, quantile_level_for_outliers, axis_modification_multiplier, remove.zeroes = FALSE){
+
+# Main function: comparing_sizes_per_variable
+# This function performs a series of data processing steps, including statistical analysis, and plotting, to investigate the relationship between various environmental concentrations and biological variables (such as tissue types and year). The analysis uses mantle length as a categorical variable to group data into small, medium, and large categories, which are then used to visualize how pollution levels change in different tissues of the squid depending on things like how far from land they were found or what month they were caught — and also comparing if larger, medium, or smaller squids have different concentration patterns, using regression lines to show how strong those patterns are. The function includes options for handling outliers, zero values, and performing statistical modeling (e.g., linear regression) to assess the strength of these relationships. Plots are generated using `ggplot2`, and results are returned in a list.
+comparing_sizes_per_pollutant <- function (data_list, axis_modification_multiplier, variable, remove.zeroes = FALSE){
   
   dataset_with_numerical_values <- data_list$dataset_with_numerical_values
   
@@ -427,20 +548,20 @@ data_mining_using_mantle_length_for_concentrations_collectively <- function (dat
   
   # Step 2: Initialize empty lists for storing results
   list0 <- list()
-  list1 <- list()
-  list2 <- list()
   list0names <- c()
-  list1names <- c()
-  list2names <- c()
-  
+ 
   # Step 3: Determine pollutant range and subset the dataset based on its presence
   if (grepl("Fe|Ag", colnames(dataset_with_numerical_values)[16])) {
     # Heavy metals subset
     range <- colnames(dataset_with_numerical_values[16:25])
+    icons_hm <- apply(HMiconz, 1, markdown_function_for_HM_icons)
+    icons_markdown <- icons_hm
     range_name <- 'Fe:Pb'
     number_range <- 17:26
   } else {
     # Organic compounds subset
+    icons_oc <- apply(OCiconz, 1, markdown_function_for_OC_icons)
+    icons_markdown <- icons_oc
     range <- colnames(dataset_with_numerical_values[16:19])
     range_name <- 'Adipic_acid:Ibuprofen'
     number_range <- 17:20
@@ -462,47 +583,49 @@ data_mining_using_mantle_length_for_concentrations_collectively <- function (dat
   
   subsetted_dataset_with_variables <- dataset_with_numerical_values[, c(8, 9, 13)]#Subsetting 
   
-  subsetted_dataset_with_numerical_values <- dataset_with_numerical_values[,c(number_range, 3, 6, 7:13)]# subsetting needed columns for futher analysis 
+  subsetted_dataset_with_numerical_values <- dataset_with_numerical_values[,c(3, 6, 7:13, number_range)]# subsetting needed columns for futher analysis 
   
   
   # Step 6: Loop through variables and calculate coefficients
-  for (h in 1:3) {
-    variable <- colnames(subsetted_dataset_with_variables)[h]
-    print(variable)
+  for (h in 1:length(number_range)) {
+   pollutant <- colnames(dataset_with_numerical_values[,c(number_range)])[h]
+    print(pollutant)
     
     coefficients_accumulated <- data.frame(matrix(ncol = 9, nrow = 0))
     pvalues_accumulated <- data.frame(matrix(ncol = 9, nrow = 0))
     
-    subsetted_dataset_with_numerical_values2 <- subsetted_dataset_with_numerical_values #saving subsetted dataset to a new dataset
-    tissues <- levels(factor(subsetted_dataset_with_numerical_values2$Tissue))#creating a vector of tissues for later data processing
-    sizes <- levels(factor(subsetted_dataset_with_numerical_values2$size))#creating a vector of sizes for later data processing
+    # subsetted_dataset_with_numerical_values2 <- subsetted_dataset_with_numerical_values #saving subsetted dataset to a new dataset
+    tissues <- levels(factor(subsetted_dataset_with_numerical_values$Tissue))#creating a vector of tissues for later data processing
+    sizes <- levels(factor(subsetted_dataset_with_numerical_values$size))#creating a vector of sizes for later data processing
     
+    if (!(variable %in% c("Month_of_Capture", "dta_km", "dtfl_km"))){
+      stop("Please use one of the below variables, copy and paste if need be:\n1)Month_of_Capture\n2)dta_km\n3)dtfl_km")# This piece of code accounts for if any other variable (x variable) is chosen other than these three or in the even that they were typed wrong. It send out a messsage to the user.
+    }
+
     # Step 7: Long format transformation of the dataset
     if (remove.zeroes == FALSE) {
-      long_dataset <- subsetted_dataset_with_numerical_values2 %>%
-        pivot_longer(all_of(range), names_to = "pollutants", values_to = "concentrations") %>%
-        pivot_longer(!!rlang::sym(paste0(variable)), names_to = "vars", values_to = "values") %>%
-        mutate(concentrations = as.numeric(concentrations),values = as.numeric(values))
+      long_dataset <- subsetted_dataset_with_numerical_values %>%
+        pivot_longer(paste(pollutant), names_to = "pollutants", values_to = "concentrations") %>%
+        pivot_longer(!!rlang::sym(paste(variable)), names_to = "vars", values_to = "Values") %>%
+        mutate(concentrations = as.numeric(concentrations),Values = as.numeric(Values))
     } else {
-      long_dataset <- subsetted_dataset_with_numerical_values2 %>%
-        pivot_longer(all_of(range), names_to = "pollutants", values_to = "concentrations") %>%
-        pivot_longer(!!rlang::sym(paste0(variable)), names_to = "vars", values_to = "values") %>%
+      long_dataset <- subsetted_dataset_with_numerical_values %>%
+        pivot_longer(paste(pollutant), names_to = "pollutants", values_to = "concentrations") %>%
+        pivot_longer(!!rlang::sym(paste0(variable)), names_to = "vars", values_to = "Values") %>%
         filter(concentrations != 0) %>%
         mutate(
           concentrations = as.numeric(concentrations),
-          values = as.numeric(values)
+          Values = as.numeric(Values)
         )
     }
-    
     if (nrow(long_dataset) != 0) {
       # Step 8: Loop through tissues and calculate coefficients
       for (i in 1:length(tissues)) {
         long_dataset_subsetted_by_tissue <- long_dataset %>%
           group_by(Year) %>%
           filter(Tissue == tissues[i])
-        print(long_dataset_subsetted_by_tissue)
         if (nrow(long_dataset_subsetted_by_tissue) > 0) {
-          coefficients <- get_coefficients(long_dataset_subsetted_by_tissue, quantile_level_for_outliers, axis_modification_multiplier)
+          coefficients <- get_coefficients(long_dataset_subsetted_by_tissue, axis_modification_multiplier)
           coefficients_accumulated <- rbind(coefficients_accumulated, coefficients)
         }
       }
@@ -510,10 +633,10 @@ data_mining_using_mantle_length_for_concentrations_collectively <- function (dat
       # Step 9: Calculate p-values
       pvalues <- coefficient_results_modification(coefficients_accumulated)
       pvalues_accumulated <- rbind(pvalues_accumulated, pvalues)
-
+      print(pvalues_accumulated)
       
       # Step 10: Modify dataset with accumulated coefficients
-      coefficients_accumulated_modified <- coefficients_accumulated[, -c(4:6)] %>%
+      coefficients_accumulated_modified <- coefficients_accumulated[, -c(4:7)] %>%
         distinct(Tissue, Year, y_axis_upper_limit, size)
       
       long_dataset2 <- long_dataset %>%
@@ -538,40 +661,45 @@ data_mining_using_mantle_length_for_concentrations_collectively <- function (dat
         filter(y_axis_upper_limit == max(y_axis_upper_limit)) %>%
         distinct(Tissue, y_axis_upper_limit)
       
+      # Ensuring that Tissue is a factor with the correct order for 'y' axis scales
+      reordered_tissues <- c("liver", "stomach", "muscle", "inksac")
+      long_dataset_modified1$Tissue <- factor(long_dataset_modified1$Tissue, levels = c("liver", "stomach", "muscle", "inksac"))
+      
       # Create scale data for plotting
       df_scales <- data.frame(
-        Tissue = c("liver", "stomach", "muscle", "inksac"),
+        Tissue = factor(c("liver", "stomach", "muscle", "inksac"), levels = reordered_tissues),  # Ensure order
         ymin = c(0, 0, 0, 0),
         ymax = c(NA, NA, NA, NA),
         n = c(5, 5, 5, 5)
       )
       
       df_scales <- df_scales %>%
-        inner_join(long_dataset_modified1, by = "Tissue") %>%
-        mutate(ymax = coalesce(y_axis_upper_limit)) %>%
+        left_join(long_dataset_modified1, by = "Tissue") %>%
+        mutate(ymax = coalesce(y_axis_upper_limit, 0)) %>%
         select(Tissue, ymin, ymax, n)
+      
       
       # Generate scale data for plotting
       df_scales <- split(df_scales, df_scales$Tissue)
       scales <- lapply(df_scales, function(x) {
         scale_y_continuous(limits = c(x$ymin, x$ymax), n.breaks = x$n)
       })
-      
+    
       # Step 11: Plotting
       if (unique(long_dataset$vars) == "Month_of_Capture") {
-        long_dataset$values <- cut(long_dataset$values, breaks = 4, labels = c(3, 4, 5, 6))
+        long_dataset$Values <- cut(long_dataset$Values, breaks = 4, labels = c(3, 4, 5, 6))
       }
       
-      reordered_tissues <- c("liver", "stomach", "muscle", "inksac")
+      # Ensuring that Tissue is a factor with the correct order for plotting 
+      long_dataset$Tissue <- factor(long_dataset$Tissue, levels = c("liver", "stomach", "muscle", "inksac"))
       Colors <- setNames(c('#F8766D', '#7CAE00', '#00A9FF'), sizes)
       
-      # Generate plot based on variable
-      if (variable == 'dta_km') {
-        dta_km <- ggplot(long_dataset, aes(values, concentrations, colour = size, group = size)) +
+      #Plotting graphs per pollutant
+        graph <- long_dataset %>% ggplot(aes(Values, concentrations, colour = size, group = size)) +
           scale_colour_manual(values = Colors) +
           geom_smooth(method = "lm", se = FALSE) +
           labs(
-            title = paste('<B>', range_name, '::', '</B>', variable, "Vs Conc mg/kg using size", sep = ""),
+            title = paste(icons_markdown[h],'<B>', pollutant, '::', '</B>', variable, "Vs Conc mg/kg using size", sep = ""),
             y = "Concentration mg/kg", 
             x = paste(variable)
           ) +
@@ -585,61 +713,84 @@ data_mining_using_mantle_length_for_concentrations_collectively <- function (dat
           geom_point(aes(shape = size, color = size), size = 2) +
           {if (nrow(pvalues_accumulated) != 0) geom_text(pvalues_accumulated, mapping = aes(label = paste(rho, pvalues, sep = ",")), hjust = -0.7, size = 3.5, fontface = "italic", position = position_dodge(width = .1), check_overlap = FALSE)}
         
-        list0 <- append(list(dta_km), list0, 0)
-        name0 <- paste(range_name, "plots", variable, sep = "")
+        #Appending graphs to list 
+        list0 <- append(list(graph), list0, 0)
+        name0 <- paste(pollutant, "_plot_", variable, sep = "")
         list0names <- append(list0names, name0)
-      } else if (variable == 'dtfl_km') {
-        dtfl_km <- ggplot(long_dataset, aes(values, concentrations, colour = size, group = size)) +
-          scale_colour_manual(values = Colors) +
-          geom_smooth(method = "lm", se = FALSE) +
-          labs(
-            title = paste('<B>', range_name, '::', '</B>', variable, "Vs Conc mg/kg using size", sep = ""),
-            y = "Concentration mg/kg", 
-            x = paste(variable)
-          ) +
-          theme(
-            plot.title = ggtext::element_markdown(),
-            strip.text = element_text(size = 12, face = "bold"),
-            legend.title = element_text(face = "bold", size = 14)
-          ) +
-          facet_grid(factor(Tissue, levels = reordered_tissues) ~ Year, scales = "free", drop = FALSE) +
-          ggh4x::facetted_pos_scales(y = scales) +
-          geom_point(aes(shape = size, color = size), size = 2) +
-          {if (nrow(pvalues_accumulated) != 0) geom_text(pvalues_accumulated, mapping = aes(label = paste(rho, pvalues, sep = ",")), hjust = -0.7, size = 3.5, fontface = "italic", position = position_dodge(width = .1), check_overlap = FALSE)}
-        
-        list1 <- append(list(dtfl_km), list1, 0)
-        name1 <- paste(range_name, "plots", variable, sep = "")
-        list1names <- append(list1names, name1)
-      } else {
-        MOC <- ggplot(long_dataset, aes(values, concentrations, colour = size, group = size)) +
-          scale_colour_manual(values = Colors) +
-          geom_smooth(method = "lm", se = FALSE) +
-          labs(
-            title = paste('<B>', range_name, '::', '</B>', variable, "Vs Conc mg/kg using size", sep = ""),
-            y = "Concentration mg/kg", 
-            x = paste(variable)
-          ) +
-          theme(
-            plot.title = ggtext::element_markdown(),
-            strip.text = element_text(size = 12, face = "bold"),
-            legend.title = element_text(face = "bold", size = 14)
-          ) +
-          facet_grid(factor(Tissue, levels = reordered_tissues) ~ Year, scales = "free", drop = FALSE) +
-          ggh4x::facetted_pos_scales(y = scales) +
-          geom_point(aes(shape = size, color = size), size = 2) +
-          {if (nrow(pvalues_accumulated) != 0) geom_text(pvalues_accumulated, mapping = aes(label = paste(rho, pvalues, sep = ",")), hjust = -0.7, size = 3.5, fontface = "italic", position = position_dodge(width = .1), check_overlap = FALSE)}
-        
-        list2 <- append(list(MOC), list2, 0)
-        name2 <- paste(range_name, "plots", variable, sep = "")
-        list2names <- append(list2names, name2)
-      }
     }
   }
   
+  #Combining rows from with coefficients to add to list later
   final_coefficients_accumulated <- rbind(final_coefficients_accumulated, coefficients_accumulated)
   
-  return(list(dta_km = dta_km, dtfl_km = dtfl_km, MOC = MOC, final_coefficients_accumulated = final_coefficients_accumulated))
+  #If a list is not empty, it assigns names to its elements using the corresponding listXnames vector.
+  if (length(list0) > 0) names(list0) <- list0names  
+
+  
+  
+  return(list(graphs = list0, final_coefficients_accumulated = final_coefficients_accumulated))
 }
 
-#Activating Main Function 
-elements_from_data_mining_using_mantle_length <- data_mining_using_mantle_length_for_concentrations_collectively (datasets_for_heavy_metals_data_distribution, quantile_level_for_outliers = 0.95, axis_modification_multiplier = 0.65, remove.zeroes = TRUE)
+
+#Calling Main Function. All arguments except remove.zeroes (default is set at False) are required and user has to choose between datasets_for_organic_compounds or datasets_for_heavy_metals. Also choose a multiplier to help adjust the y_axis since some plots may not show results clearly due to the compression effect or scale distortion of the outliers. For example: The 0.80 means that the upper limit of the y axis will be set at 0.80 * the minimum outlier from the upper quantile for each pollutant resulting in different y axis scales for each pollutant based on their minimum upper outliers. The user also has the option of choosing between three variables mainly Month_of_Capture, dta_km(distance to Argentina_km) and dtfl_km(distance to the Falkland Islands_km) to show how pollution levels change in different tissues of the squid depending on the aforementioned three variables. Users can also remove all zeroes and focus on only the detected concentrations or keep them. The results are saved in size_comparison_results list.
+size_comparison_results_per_pollutant <- comparing_sizes_per_pollutant (datasets_for_heavy_metals,
+                                                                      axis_modification_multiplier = 0.80, 
+                                                                      variable='Month_of_Capture',
+                                                                      remove.zeroes = TRUE) 
+
+
+#Below code saves multiple plots into individual PNG files. It loops through the list of plots and and for each plot it extracts its name, and the plot then saves it in one .png file using grid.draw()
+save_graphs <- function(graph_list) {
+  
+  
+# This first saves the name of the first plot in the list then the ".*_plot_" matches everything up to the second _ after plot, ergo it captures everything until _plot_. The "" means we replace everything that we just captured with nothing, so we're left with just what’s after _plot_ which is the name of the variable_name. This variable name will later be used to create the corresponding subfolders.
+plot_name <- names(graph_list[["graphs"]])[[1]]
+variable_name <- sub(".*_plot_", "", plot_name)  
+  
+  
+# Define the folder where you want to save the PNG files 
+if (grepl("Fe|Ag", names(graph_list[["graphs"]])[[1]])) {
+output_folder <- file.path("/Users/mrnobody/Documents/GitHub/Squid-Fest/3-Data Mining/Data_mining_plots/size_comparison_per_variable/Heavy_metals",variable_name)
+}else{
+output_folder <- file.path("/Users/mrnobody/Documents/GitHub/Squid-Fest/3-Data Mining/Data_mining_plots/size_comparison_per_variable/Organic_compounds",variable_name)  
+}
+
+# Create the folder if it doesn't exist
+if (!dir.exists(output_folder)) {
+  dir.create(output_folder)
+}
+
+# Loop through each plot
+for (i in seq_along(graph_list$graphs)) {
+  
+  plot_name <- names(graph_list$graphs)[i]
+  plot_object <- graph_list$graphs[[i]]
+
+  # Debugging info
+  cat("\n----------\n")
+  cat("Checking:", plot_name, "\n")
+  print(class(plot_object))
+  print(length(plot_object))
+  
+  # Use tryCatch to handle all errors
+  tryCatch({
+    # Create output file path
+    output_path <- file.path(output_folder, paste0(plot_name, ".png"))
+    
+    # Save PNG
+    png(output_path, width = 1400, height = 800)
+    
+    #Converts the ggplot object into a "grob" (graphical object) then draws it on a PNG to use all available space.
+    grid.draw(ggplotGrob(plot_object))
+    
+    dev.off()
+    cat("Saved:", output_path, "\n")
+    
+  }, error = function(e) {
+    cat("⚠️ Error in", plot_name, ":", e$message, "\n")
+  })
+}
+}
+
+#Calling save_graphs function:
+save_graphs(size_comparison_results_per_pollutant)
